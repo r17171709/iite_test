@@ -107,6 +107,10 @@ public class CheckActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.save_result:
+                if (uniqueid.equals("")) {
+                    showToast("无设备唯一ID不能保存");
+                    return;
+                }
                 BLECheckModel checkModel=new BLECheckModel();
                 checkModel.setBd_sn(uniqueid);
                 checkModel.setQc_id_a(ParamUtils.IDS);
@@ -121,6 +125,8 @@ public class CheckActivity extends BaseActivity {
                 checkModel.setBd_swith(""+command);
                 checkModel.setBd_rssi(""+rssiNum);
                 Dao.getInstance(this).addData(checkModel);
+                showToast("保存成功");
+                closeBLE();
                 break;
             case R.id.check_qrcode:
                 if (ACache.get(this).getAsString("rssi")==null || ACache.get(this).getAsString("battery")==null) {
@@ -229,6 +235,18 @@ public class CheckActivity extends BaseActivity {
         else if (blestate== BLEConnectModel.BLESTATE.STATE_DISCONNECTED) {
             dismissDialog();
             check_state.setText("设备已断开");
+            //断开连接之后重新初始化
+            rssi_result.setText("");
+            command_result.setText("");
+            battery_result.setText("");
+
+            rssi=false;
+            rssiNum=0;
+            command=false;
+            battery=false;
+            batteryNum=0;
+            uniqueid="";
+            deviceName="";
         }
         else if (blestate== BLEConnectModel.BLESTATE.STATE_CANCELSCAN) {
             dismissDialog();

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
+import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 import com.renyu.iitebletest.model.BLECheckModel;
@@ -88,7 +89,9 @@ public class Dao extends OrmLiteSqliteOpenHelper {
      */
     public void deleteData(String uniqueid) {
         try {
-            getDao(BLECheckModel.class).deleteBuilder().where().eq("bd_sn", uniqueid);
+            DeleteBuilder deleteBuilder=getDao(BLECheckModel.class).deleteBuilder();
+            deleteBuilder.where().eq("bd_sn", uniqueid);
+            deleteBuilder.delete();
         } catch (SQLException e) {
             e.printStackTrace();
         }
