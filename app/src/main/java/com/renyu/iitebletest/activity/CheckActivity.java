@@ -129,6 +129,7 @@ public class CheckActivity extends BaseActivity {
                 closeBLE();
                 break;
             case R.id.check_qrcode:
+                closeBLE();
                 if (ACache.get(this).getAsString("rssi")==null || ACache.get(this).getAsString("battery")==null) {
                     showToast("请输入相应测试限额");
                     startActivity(new Intent(CheckActivity.this, SettingActivity.class));
@@ -138,6 +139,7 @@ public class CheckActivity extends BaseActivity {
                 startActivityForResult(intent, ParamUtils.RESULT_QRCODE);
                 break;
             case R.id.check_scan:
+                closeBLE();
                 if (ACache.get(this).getAsString("rssi")==null || ACache.get(this).getAsString("battery")==null) {
                     showToast("请输入相应测试限额");
                     startActivity(new Intent(CheckActivity.this, SettingActivity.class));
@@ -225,6 +227,7 @@ public class CheckActivity extends BaseActivity {
                     sendCommand(ParamUtils.BLE_COMMAND_RSSI);
                     sendCommand(ParamUtils.BLE_COMMAND_BATTERY);
                     sendCommand(ParamUtils.BLE_COMMAND_GETUID);
+                    sendCommand(ParamUtils.BLE_COMMAND_TEST);
                 }
             });
         }

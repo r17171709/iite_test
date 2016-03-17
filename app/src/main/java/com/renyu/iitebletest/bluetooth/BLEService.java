@@ -203,6 +203,9 @@ public class BLEService extends Service {
                 closeAllBLEConnect();
                 ACache.get(this).remove("lastIiteName");
             }
+            else if (command==ParamUtils.BLE_COMMAND_TEST) {
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_TEST, null, this);
+            }
         }
         return super.onStartCommand(intent, flags, startId);
     }
