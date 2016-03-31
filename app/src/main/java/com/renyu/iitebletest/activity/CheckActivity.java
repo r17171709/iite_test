@@ -3,9 +3,11 @@ package com.renyu.iitebletest.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.renyu.iitebletest.R;
@@ -38,14 +40,16 @@ import rx.schedulers.Schedulers;
  */
 public class CheckActivity extends BaseActivity {
 
+    @Bind(R.id.check_title)
+    Toolbar check_title;
     @Bind(R.id.check_state)
     TextView check_state;
     @Bind(R.id.rssi_result)
-    TextView rssi_result;
+    ImageView rssi_result;
     @Bind(R.id.command_result)
-    TextView command_result;
+    ImageView command_result;
     @Bind(R.id.battery_result)
-    TextView battery_result;
+    ImageView battery_result;
 
     boolean battery;
     int batteryNum=0;
@@ -63,6 +67,37 @@ public class CheckActivity extends BaseActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        check_title.setTitle("");
+        setSupportActionBar(check_title);
+        check_title.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (item.getItemId()==R.id.menu_check_setting) {
+                    startActivity(new Intent(CheckActivity.this, SettingActivity.class));
+                }
+                if (item.getItemId()==R.id.menu_check_upload) {
+                    if (ParamUtils.currentUploadCount==ParamUtils.totalUploadCount) {
+                        List<BLECheckModel> lists=Dao.getInstance(CheckActivity.this).getAllData();
+                        if (lists.size()==0) {
+                            showToast("暂无数据");
+                            return false;
+                        }
+                        showToast("开始上传，上传结束之前，将不能再次执行上传工作");
+                        ParamUtils.totalUploadCount=lists.size();
+                        ParamUtils.currentUploadCount=0;
+                        for (BLECheckModel list : lists) {
+                            RetrofitUtils.getInstance().upload(list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
+                                    list.getBd_old(), list.getBd_rssi(), Boolean.parseBoolean(list.getBd_swith()),
+                                    Boolean.parseBoolean(list.getQc_result_a()), CheckActivity.this);
+                        }
+                    }
+                    else {
+                        showToast("正在上传，请稍后再试");
+                    }
+                }
+                return false;
+            }
+        });
 
         QueueUtils.getInstance();
 
@@ -73,34 +108,6 @@ public class CheckActivity extends BaseActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_check, menu);
         return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId()==R.id.menu_check_setting) {
-            startActivity(new Intent(CheckActivity.this, SettingActivity.class));
-        }
-        if (item.getItemId()==R.id.menu_check_upload) {
-            if (ParamUtils.currentUploadCount==ParamUtils.totalUploadCount) {
-                List<BLECheckModel> lists=Dao.getInstance(this).getAllData();
-                if (lists.size()==0) {
-                    showToast("暂无数据");
-                    return super.onOptionsItemSelected(item);
-                }
-                showToast("开始上传，上传结束之前，将不能再次执行上传工作");
-                ParamUtils.totalUploadCount=lists.size();
-                ParamUtils.currentUploadCount=0;
-                for (BLECheckModel list : lists) {
-                    RetrofitUtils.getInstance().upload(list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
-                            list.getBd_old(), list.getBd_rssi(), Boolean.parseBoolean(list.getBd_swith()),
-                            Boolean.parseBoolean(list.getQc_result_a()), this);
-                }
-            }
-            else {
-                showToast("正在上传，请稍后再试");
-            }
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     @OnClick({R.id.save_result, R.id.check_qrcode, R.id.check_scan})
@@ -145,7 +152,7 @@ public class CheckActivity extends BaseActivity {
                     startActivity(new Intent(CheckActivity.this, SettingActivity.class));
                     return;
                 }
-                openBlueTooth();
+                startActivityForResult(new Intent(CheckActivity.this, BLEDeviceListActivity.class), ParamUtils.RESULT_SCANBLE);
                 break;
         }
     }
@@ -166,22 +173,22 @@ public class CheckActivity extends BaseActivity {
         }
         else if (model.getCommand()==ParamUtils.BLE_COMMAND_RSSI) {
             if (Math.abs(Integer.parseInt(model.getValue()))<Integer.parseInt(ACache.get(this).getAsString("rssi"))) {
-                rssi_result.setText("通过");
+                rssi_result.setImageResource(R.mipmap.ic_state3);
                 rssi=true;
             }
             else {
-                rssi_result.setText("不通过");
+                rssi_result.setImageResource(R.mipmap.ic_state2);
                 rssi=false;
             }
             rssiNum=Integer.parseInt(model.getValue());
         }
         else if (model.getCommand()==ParamUtils.BLE_COMMAND_BATTERY) {
             if (Math.abs(Integer.parseInt(model.getValue()))>Integer.parseInt(ACache.get(this).getAsString("battery"))) {
-                battery_result.setText("通过");
+                battery_result.setImageResource(R.mipmap.ic_state3);
                 battery=true;
             }
             else {
-                battery_result.setText("不通过");
+                battery_result.setImageResource(R.mipmap.ic_state2);
                 battery=false;
             }
             batteryNum=Integer.parseInt(model.getValue());
@@ -190,16 +197,16 @@ public class CheckActivity extends BaseActivity {
             try {
                 JSONObject jsonObject=new JSONObject(model.getValue());
                 if (jsonObject.getInt("result")==1) {
-                    command_result.setText("通过");
+                    command_result.setImageResource(R.mipmap.ic_state3);
                     command=true;
                 }
                 else {
-                    command_result.setText("不通过");
+                    command_result.setImageResource(R.mipmap.ic_state2);
                     command=false;
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
-                command_result.setText("不通过");
+                command_result.setImageResource(R.mipmap.ic_state2);
                 command=false;
             }
         }
@@ -223,6 +230,7 @@ public class CheckActivity extends BaseActivity {
             Observable.timer(1, TimeUnit.SECONDS).observeOn(AndroidSchedulers.mainThread()).subscribeOn(Schedulers.io()).subscribe(new Action1<Long>() {
                 @Override
                 public void call(Long aLong) {
+                    sendCommand(ParamUtils.BLE_COMMAND_SETMOTOR);
                     sendCommand(ParamUtils.BLE_COMMAND_GETINFO);
                     sendCommand(ParamUtils.BLE_COMMAND_RSSI);
                     sendCommand(ParamUtils.BLE_COMMAND_BATTERY);
@@ -233,15 +241,15 @@ public class CheckActivity extends BaseActivity {
         }
         else if (blestate== BLEConnectModel.BLESTATE.STATE_NOSCAN) {
             dismissDialog();
-            check_state.setText("扫描不到任何设备");
+            check_state.setText("扫描结束");
         }
         else if (blestate== BLEConnectModel.BLESTATE.STATE_DISCONNECTED) {
             dismissDialog();
             check_state.setText("设备已断开");
             //断开连接之后重新初始化
-            rssi_result.setText("");
-            command_result.setText("");
-            battery_result.setText("");
+            rssi_result.setImageResource(R.mipmap.ic_state1);
+            command_result.setImageResource(R.mipmap.ic_state1);
+            battery_result.setImageResource(R.mipmap.ic_state1);
 
             rssi=false;
             rssiNum=0;
@@ -255,10 +263,6 @@ public class CheckActivity extends BaseActivity {
             dismissDialog();
             check_state.setText("扫描取消");
         }
-        else if (blestate== BLEConnectModel.BLESTATE.STATE_MOREDEVICE) {
-            dismissDialog();
-            check_state.setText("周围设备太多");
-        }
         else {
             dismissDialog();
             check_state.setText("正在连接设备中");
@@ -269,7 +273,16 @@ public class CheckActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode==RESULT_OK && requestCode==ParamUtils.RESULT_QRCODE) {
-            openBlueTooth(data.getExtras().getString("result"));
+
+            Intent intent=new Intent(CheckActivity.this, BLEDeviceListActivity.class);
+            Bundle bundle=new Bundle();
+            bundle.putString("name", data.getExtras().getString("result"));
+            intent.putExtras(bundle);
+            startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
+        }
+        else if (resultCode==RESULT_OK && requestCode==ParamUtils.RESULT_SCANBLE) {
+            sendCommandWithName(ParamUtils.BLE_COMMAND_CONNECT, data.getExtras().getString("address"));
+            check_state.setText("正在连接设备中");
         }
     }
 }

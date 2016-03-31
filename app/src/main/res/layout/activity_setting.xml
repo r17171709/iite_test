@@ -1,45 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimary">
     <LinearLayout
         android:orientation="vertical" android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <android.support.design.widget.TextInputLayout
+        <LinearLayout
+            android:layout_marginTop="40dip"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@mipmap/ic_logo2"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="23sp"
+                android:layout_marginLeft="10dip"
+                android:text="全制测试"/>
+        </LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="45dip"
+            android:textSize="16sp"
+            android:paddingLeft="20dip"
+            android:textColor="@android:color/white"
+            android:text="信号设置"/>
+        <EditText
             android:id="@+id/setting_rssi"
+            android:layout_above="@id/login"
             android:layout_margin="10dip"
+            android:textColorHint="@android:color/white"
+            android:textColor="@android:color/white"
+            android:background="@drawable/shape_edit"
+            android:paddingLeft="20dip"
+            android:paddingRight="20dip"
+            android:inputType="number"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/colorAccent"
-                android:textColorHint="@color/colorAccent"
-                android:inputType="number"
-                android:hint="信号设置"/>
-        </android.support.design.widget.TextInputLayout>
-        <android.support.design.widget.TextInputLayout
+            android:layout_height="52dip" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingLeft="20dip"
+            android:layout_marginTop="10dip"
+            android:textColor="@android:color/white"
+            android:text="老化设置"/>
+        <EditText
             android:id="@+id/setting_battery"
+            android:layout_above="@id/login"
             android:layout_margin="10dip"
+            android:textColorHint="@android:color/white"
+            android:textColor="@android:color/white"
+            android:background="@drawable/shape_edit"
+            android:paddingLeft="20dip"
+            android:paddingRight="20dip"
+            android:inputType="number"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/colorAccent"
-                android:textColorHint="@color/colorAccent"
-                android:inputType="number"
-                android:hint="老化设置"/>
-        </android.support.design.widget.TextInputLayout>
+            android:layout_height="52dip" />
     </LinearLayout>
     <Button
         android:id="@+id/setting"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dip"
+        android:layout_height="52dip"
+        android:layout_marginLeft="10dip"
+        android:layout_marginRight="10dip"
+        android:layout_marginTop="10dip"
+        android:layout_marginBottom="50dip"
         android:text="确定"
-        android:textSize="15sp"
+        android:textSize="20sp"
         android:layout_alignParentBottom="true"
-        android:textColor="@android:color/white"
-        android:background="@color/colorAccent"/>
+        android:textColor="@color/colorPrimary"
+        android:background="@drawable/shape_botton_white"/>
 </RelativeLayout>

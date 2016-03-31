@@ -2,7 +2,6 @@ package com.renyu.iitebletest.activity;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.design.widget.TextInputLayout;
 import android.view.View;
 import android.widget.EditText;
 
@@ -18,11 +17,9 @@ import butterknife.OnClick;
 public class SettingActivity extends BaseActivity {
 
     @Bind(R.id.setting_rssi)
-    TextInputLayout setting_rssi;
-    EditText rssi;
+    EditText setting_rssi;
     @Bind(R.id.setting_battery)
-    TextInputLayout setting_battery;
-    EditText battery;
+    EditText setting_battery;
 
     @Override
     public int initContentView() {
@@ -37,20 +34,18 @@ public class SettingActivity extends BaseActivity {
     }
 
     private void initViews() {
-        rssi=setting_rssi.getEditText();
-        rssi.setText(ACache.get(this).getAsString("rssi")!=null?ACache.get(this).getAsString("rssi"):"0");
-        battery=setting_battery.getEditText();
-        battery.setText(ACache.get(this).getAsString("battery")!=null?ACache.get(this).getAsString("battery"):"0");
+        setting_rssi.setText(ACache.get(this).getAsString("rssi")!=null?ACache.get(this).getAsString("rssi"):"0");
+        setting_battery.setText(ACache.get(this).getAsString("battery")!=null?ACache.get(this).getAsString("battery"):"0");
     }
 
     @OnClick(R.id.setting)
     public void onClick(View view) {
-        if (rssi.getText().toString().equals("") || battery.getText().toString().equals("")) {
+        if (setting_rssi.getText().toString().equals("") || setting_battery.getText().toString().equals("")) {
             showToast("请输入相应测试限额");
             return;
         }
-        ACache.get(this).put("rssi", rssi.getText().toString());
-        ACache.get(this).put("battery", battery.getText().toString());
+        ACache.get(this).put("rssi", setting_rssi.getText().toString());
+        ACache.get(this).put("battery", setting_battery.getText().toString());
         showToast("设置成功");
         finish();
     }

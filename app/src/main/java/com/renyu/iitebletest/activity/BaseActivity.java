@@ -38,7 +38,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     public void openBlueTooth() {
         if (BLEUtils.checkBluetoothAvaliable(this)) {
             if (BLEUtils.checkBluetoothOpen(this)) {
-                showDialog("提示", "正在绑定");
+                showDialog("提示", "正在扫描");
                 scanBLE();
             }
             else {
@@ -54,7 +54,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     public void openBlueTooth(String name) {
         if (BLEUtils.checkBluetoothAvaliable(this)) {
             if (BLEUtils.checkBluetoothOpen(this)) {
-                showDialog("提示", "正在绑定");
+                showDialog("提示", "正在扫描");
                 scanBLE(name);
             }
             else {

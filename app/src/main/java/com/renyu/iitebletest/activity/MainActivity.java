@@ -29,13 +29,14 @@ public class MainActivity extends BaseActivity {
 
     String[] commandsText={"设定时间", "读取时间", "读取牙刷状态", "设置userid", "读取userid", "恢复出厂设置",
             "获取牙刷当前姿态", "获取最近一次刷牙记录", "获取所有刷牙记录", "获取指定一条刷牙记录", "获取当前姿态识别模式",
-            "设定姿态识别模式", "设定led1", "设定led2", "设定motor", "设备reset", "获取uniqueid", "获取qrcode",
-            "进入固件升级模式", "读取电池电压", "绑定牙刷"};
+            "设定姿态识别模式", "进入游戏模式", "游戏模式的暂停和恢复", "设定led1", "设定led2", "设定motor", "设备reset",
+            "获取uniqueid", "获取qrcode", "进入固件升级模式", "读取电池电压", "绑定牙刷"};
     int[] commands={ParamUtils.BLE_COMMAND_TIME, ParamUtils.BLE_COMMAND_GETTIME, ParamUtils.BLE_COMMAND_GETSTATE,
             ParamUtils.BLE_COMMAND_SETUSERID, ParamUtils.BLE_COMMAND_GETUSERID, ParamUtils.BLE_COMMAND_FACTORY,
             ParamUtils.BLE_COMMAND_ATTITUDE, ParamUtils.BLE_COMMAND_GETCURRENTTEETHINFO,
             ParamUtils.BLE_COMMAND_GETALLINFO, ParamUtils.BLE_COMMAND_GETONEINFO,
-            ParamUtils.BLE_COMMAND_ATTITUDEMODE, ParamUtils.BLE_COMMAND_SETATTITUDEMODE,
+            ParamUtils.BLE_COMMAND_ATTITUDEMODE, ParamUtils.BLE_COMMAND_SETATTITUDEMODE, ParamUtils.BLE_COMMAND_GAMESTART,
+            ParamUtils.BLE_COMMAND_GAMECONTROL,
             ParamUtils.BLE_COMMAND_SETLED1, ParamUtils.BLE_COMMAND_SETLED2, ParamUtils.BLE_COMMAND_SETMOTOR,
             ParamUtils.BLE_COMMAND_SETRESET, ParamUtils.BLE_COMMAND_GETUID, ParamUtils.BLE_COMMAND_GETQRCODE,
             ParamUtils.BLE_COMMAND_UPDATE, ParamUtils.BLE_COMMAND_GETV, ParamUtils.BLE_COMMAND_BINDTEETH};

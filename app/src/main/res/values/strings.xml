@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">iite全制测试</string>
+
+    <!--Data Logger file-->
+    <string name="dl_directory">CySmart</string>
+    <string name="dl_file_extension">.txt</string>
+    <string name="dl_commaseparator">" , "</string>
+    <string name="dl_characteristic_write_request"> Write request sent with value </string>
 </resources>

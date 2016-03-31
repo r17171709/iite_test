@@ -8,11 +8,15 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.renyu.iitebletest.common.ACache;
+import com.cypress.cysmart.CommonUtils.Constants;
+import com.cypress.cysmart.CommonUtils.GattAttributes;
+import com.cypress.cysmart.CommonUtils.Utils;
+import com.cypress.cysmart.OTAFirmwareUpdate.OTAResponseReceiver;
 import com.renyu.iitebletest.common.ParamUtils;
 import com.renyu.iitebletest.model.BLECommandModel;
 import com.renyu.iitebletest.model.BLEConnectModel;
@@ -42,7 +46,7 @@ public class BLEService extends Service {
     //扫描到的所有设备
     HashMap<String, com.renyu.iitebletest.bluetooth.BluetoothDevice> deviceHashMap;
     //BLE通用属性配置文件
-    BluetoothGatt gatt;
+    static BluetoothGatt gatt;
     //当前设备状态
     public static BLEConnectModel.BLESTATE blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
     //BLE整体配置
@@ -50,6 +54,8 @@ public class BLEService extends Service {
 
     //断开连接是否需要发送广播
     boolean needBroadcast=true;
+
+    private static boolean m_otaExitBootloaderCmdInProgress = false;
 
     @Override
     public void onCreate() {
@@ -96,7 +102,7 @@ public class BLEService extends Service {
                 closeAllBLEConnect();
             }
             else if (command==ParamUtils.BLE_COMMAND_SAVE) {
-                ACache.get(this).put("lastIiteName", gatt.getDevice().getName());
+
             }
             else if (command==ParamUtils.BLE_COMMAND_GETINFO) {
                 BLECommandModel model=new BLECommandModel();
@@ -107,7 +113,7 @@ public class BLEService extends Service {
             else if (command==ParamUtils.BLE_COMMAND_TIME) {
                 HashMap<String, String> params=new HashMap<>();
                 Calendar calendar=Calendar.getInstance();
-                SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 params.put("time", format.format(calendar.getTime()));
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_TIME, params, this);
             }
@@ -125,7 +131,7 @@ public class BLEService extends Service {
             }
             else if (command==ParamUtils.BLE_COMMAND_SETUSERID) {
                 HashMap<String, String> params=new HashMap<>();
-                params.put("userid", "123123abcabc");
+                params.put("userid", "test");
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_SETUSERID, params, this);
             }
             else if (command==ParamUtils.BLE_COMMAND_GETUSERID) {
@@ -153,8 +159,16 @@ public class BLEService extends Service {
             }
             else if (command==ParamUtils.BLE_COMMAND_SETATTITUDEMODE) {
                 HashMap<String, String> params=new HashMap<>();
-                params.put("model", "1");
+                params.put("model", intent.getExtras().getString("value"));
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_SETATTITUDEMODE, params, this);
+            }
+            else if (command==ParamUtils.BLE_COMMAND_GAMESTART) {
+                HashMap<String, String> params=new HashMap<>();
+                params.put("duration", intent.getExtras().getString("value"));
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_GAMESTART, params, this);
+            }
+            else if (command==ParamUtils.BLE_COMMAND_CLEANTEETH) {
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_CLEANTEETH, null, this);
             }
             else if (command==ParamUtils.BLE_COMMAND_SETLED1) {
                 HashMap<String, String> params=new HashMap<>();
@@ -201,10 +215,18 @@ public class BLEService extends Service {
                     callback.cancelScan();
                 }
                 closeAllBLEConnect();
-                ACache.get(this).remove("lastIiteName");
             }
-            else if (command==ParamUtils.BLE_COMMAND_TEST) {
-                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_TEST, null, this);
+            else if (command==ParamUtils.BLE_COMMAND_CONNECT) {
+                needBroadcast=false;
+                if (callback!=null) {
+                    callback.cancelScan();
+                }
+                closeAllBLEConnect();
+                BluetoothAdapter adapter=BluetoothAdapter.getDefaultAdapter();
+                connectBLE(adapter.getRemoteDevice(intent.getExtras().getString("value")));
+            }
+            else if (command==ParamUtils.OTAEnterBootLoaderCmd) {
+
             }
         }
         return super.onStartCommand(intent, flags, startId);
@@ -219,60 +241,43 @@ public class BLEService extends Service {
         }
         deviceHashMap.clear();
         BluetoothAdapter adapter=BluetoothAdapter.getDefaultAdapter();
+        if (adapter==null) {
+            Log.d("BLEService", "取消扫描");
+
+            if (blestate==BLEConnectModel.BLESTATE.STATE_SCAN) {
+                blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
+
+                BLEConnectModel model=new BLEConnectModel();
+                model.setBlestate(BLEConnectModel.BLESTATE.STATE_CANCELSCAN);
+                EventBus.getDefault().post(model);
+            }
+            return;
+        }
         callback=new MyLeScanCallback(10, adapter) {
             @Override
             public void scanCancelCallBack() {
                 Log.d("BLEService", "取消扫描");
 
-                if (blestate==BLEConnectModel.BLESTATE.STATE_SCAN) {
-                    blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
+                blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
 
-                    BLEConnectModel model=new BLEConnectModel();
-                    model.setBlestate(BLEConnectModel.BLESTATE.STATE_CANCELSCAN);
-                    EventBus.getDefault().post(model);
-                }
+                BLEConnectModel model=new BLEConnectModel();
+                model.setBlestate(BLEConnectModel.BLESTATE.STATE_CANCELSCAN);
+                EventBus.getDefault().post(model);
+
+                callback=null;
             }
 
             @Override
             public void scanEndCallBack() {
                 Log.d("BLEService", "扫描结束");
 
-                if (deviceHashMap.size()==0) {
-                    Log.d("BLEService", "没有扫描到设备");
+                blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
 
-                    blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
+                BLEConnectModel model=new BLEConnectModel();
+                model.setBlestate(BLEConnectModel.BLESTATE.STATE_NOSCAN);
+                EventBus.getDefault().post(model);
 
-                    BLEConnectModel model=new BLEConnectModel();
-                    model.setBlestate(BLEConnectModel.BLESTATE.STATE_NOSCAN);
-                    EventBus.getDefault().post(model);
-
-                    return;
-                }
-                if (deviceHashMap.size()>4) {
-                    Log.d("BLEService", "设备太多了");
-
-                    blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
-
-                    BLEConnectModel model=new BLEConnectModel();
-                    model.setBlestate(BLEConnectModel.BLESTATE.STATE_MOREDEVICE);
-                    EventBus.getDefault().post(model);
-
-                    return;
-                }
                 callback=null;
-                int rssi=-10000;
-                BluetoothDevice tempDevice=null;
-                //循环遍历找出信号最强的设备
-                Iterator<Map.Entry<String, com.renyu.iitebletest.bluetooth.BluetoothDevice>> devices=deviceHashMap.entrySet().iterator();
-                while (devices.hasNext()) {
-                    Map.Entry<String, com.renyu.iitebletest.bluetooth.BluetoothDevice> entry=devices.next();
-                    com.renyu.iitebletest.bluetooth.BluetoothDevice device=entry.getValue();
-                    if (rssi<device.getRssi()) {
-                        tempDevice=device.getDevice();
-                        rssi=device.getRssi();
-                    }
-                }
-                connectBLE(tempDevice);
             }
 
             @Override
@@ -283,11 +288,17 @@ public class BLEService extends Service {
                 device1.setRssi(rssi);
                 if (device.getName()!=null && device.getName().startsWith("iite")) {
                     if (name==null || name.equals("")) {
-                        deviceHashMap.put(device.getName(), device1);
+                        if (!deviceHashMap.containsKey(device.getName())) {
+                            deviceHashMap.put(device.getName(), device1);
+                            EventBus.getDefault().post(device);
+                        }
                     }
                     else {
                         if (device.getName().equals(name) || device.getName().substring(device.getName().indexOf("-")+1).equals(name)) {
-                            deviceHashMap.put(device.getName(), device1);
+                            if (!deviceHashMap.containsKey(device.getName())) {
+                                deviceHashMap.put(device.getName(), device1);
+                                EventBus.getDefault().post(device);
+                            }
                         }
                     }
                 }
@@ -310,6 +321,8 @@ public class BLEService extends Service {
             @Override
             public void call(Long aLong) {
                 closeAllBLEConnect();
+
+                disConnect();
             }
         });
 
@@ -363,18 +376,7 @@ public class BLEService extends Service {
 
                         gatt.close();
 
-                        BLEConnectModel model=new BLEConnectModel();
-                        model.setBlestate(BLEConnectModel.BLESTATE.STATE_DISCONNECTED);
-                        EventBus.getDefault().post(model);
-
-                        if (needBroadcast) {
-                            Intent intent=new Intent();
-                            intent.setAction("BLE_RETRY");
-                            sendBroadcast(intent);
-                        }
-                        needBroadcast=true;
-
-                        blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
+                        disConnect();
 
                         break;
                 }
@@ -394,7 +396,7 @@ public class BLEService extends Service {
                     else {
                         //开启通知服务
                         BluetoothGattCharacteristic characteristic = gatt.getService(ParamUtils.UUID_SERVICE_MILI).getCharacteristic(ParamUtils.UUID_SERVICE_READ);
-                        if (enableNotification(characteristic, gatt)) {
+                        if (enableNotification(characteristic, gatt, ParamUtils.UUID_DESCRIPTOR)) {
                             BLEConnectModel model=new BLEConnectModel();
                             model.setBlestate(BLEConnectModel.BLESTATE.STATE_CONNECTED);
                             EventBus.getDefault().post(model);
@@ -431,14 +433,38 @@ public class BLEService extends Service {
         });
     }
 
+    private void disConnect() {
+        BLEConnectModel model=new BLEConnectModel();
+        model.setBlestate(BLEConnectModel.BLESTATE.STATE_DISCONNECTED);
+        EventBus.getDefault().post(model);
+
+        //在不需要重试的时候，主动断开重试
+        if (needBroadcast) {
+            Intent intent=new Intent();
+            intent.setAction("BLE_RETRY");
+            sendBroadcast(intent);
+        }
+        else {
+            Intent intent=new Intent();
+            intent.setAction("BLE_RETRY_DIS");
+            sendBroadcast(intent);
+        }
+        needBroadcast=true;
+
+        blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
+    }
+
     /**
      * 关闭所有gatt连接
      */
     private void closeAllBLEConnect() {
         if (gatt!=null) {
             gatt.disconnect();
-//            refreshDeviceCache(gatt);
+            refreshDeviceCache(gatt);
             gatt=null;
+        }
+        else {
+
         }
     }
 
@@ -469,14 +495,14 @@ public class BLEService extends Service {
         return false;
     }
 
-    private boolean enableNotification(BluetoothGattCharacteristic characteristic, BluetoothGatt gatt) {
+    private boolean enableNotification(BluetoothGattCharacteristic characteristic, BluetoothGatt gatt, UUID uuid) {
         boolean success = gatt.setCharacteristicNotification(characteristic, true);
         if(!success) {
             Log.d("BLEService", "设置通知失败");
             return false;
         }
         if (characteristic.getDescriptors().size()>0) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(ParamUtils.UUID_DESCRIPTOR);
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(uuid);
             if(descriptor != null) {
                 descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                 gatt.writeDescriptor(descriptor);
@@ -522,5 +548,68 @@ public class BLEService extends Service {
                 Log.d("BluetoothIO", "gatt.readCharacteristic() return false");
             }
         }
+    }
+
+    public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {
+        synchronized (BLEService.class) {
+            writeOTABootLoaderCommand(characteristic, value);
+            if(isExitBootloaderCmd)
+                m_otaExitBootloaderCmdInProgress = true;
+        }
+    }
+
+    public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value) {
+        String serviceUUID = characteristic.getService().getUuid().toString();
+        String serviceName = GattAttributes.lookup(serviceUUID, serviceUUID);
+
+        String characteristicUUID = characteristic.getUuid().toString();
+        String characteristicName = GattAttributes.lookup(characteristicUUID, characteristicUUID);
+
+        String characteristicValue = Utils.ByteArraytoHex(value);
+        if ( gatt == null) {
+            return;
+        }
+        else {
+            byte[] valueByte = value;
+            characteristic.setValue(valueByte);
+            int counter = 20;
+            boolean status;
+            do {
+                status = gatt.writeCharacteristic(characteristic);
+                if(!status) {
+                    Log.v("CYSMART","writeCharacteristic() status: False");
+                    try {
+                        Thread.sleep(100,0);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } while (!status && (counter-- > 0));
+
+
+            if(status) {
+                String dataLog =
+                        "[" + serviceName + "|" + characteristicName + "] " +
+                        "Write request sent with value, " +
+
+                        "[ " + characteristicValue + " ]";
+                Log.i("CYSMART", dataLog);
+                Log.v("CYSMART", dataLog);
+            }
+            else {
+                Log.v("CYSMART", "writeOTABootLoaderCommand failed!");
+            }
+        }
+
+    }
+
+    private void onOtaExitBootloaderComplete(int status) {
+        Bundle bundle = new Bundle();
+        bundle.putByteArray(Constants.EXTRA_BYTE_VALUE, new byte[]{(byte)status});
+        Intent intentOTA = new Intent(OTAResponseReceiver.ACTION_OTA_DATA_AVAILABLE);
+        intentOTA.putExtras(bundle);
+        sendBroadcast(intentOTA);
     }
 }
