@@ -6,13 +6,22 @@ package com.renyu.iitebletest.model;
 public class BLEConnectModel {
 
     public enum BLESTATE {
+        //BLE 已连接
         STATE_CONNECTED,
+        //BLE 断开连接
         STATE_DISCONNECTED,
+        //BLE 正在连接
         STATE_CONNECTING,
+        //BLE 正在扫描
         STATE_SCAN,
+        //BLE 初始状态
         STATE_NOSCAN,
+        //BLE 取消扫描
         STATE_CANCELSCAN,
-        STATE_MOREDEVICE
+        //BLE 发现多设备
+        STATE_MOREDEVICE,
+        //BLE OTA
+        STATE_OTA
     }
 
     BLESTATE blestate;

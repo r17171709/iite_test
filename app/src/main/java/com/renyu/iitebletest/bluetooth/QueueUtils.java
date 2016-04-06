@@ -268,4 +268,10 @@ public class QueueUtils {
         }
         EventBus.getDefault().post(model);
     }
+
+    public void putOtaCommand() {
+        BLECommandModel model=new BLECommandModel();
+        model.setCommand(ParamUtils.BLE_COMMAND_UPDATE);
+        EventBus.getDefault().post(model);
+    }
 }

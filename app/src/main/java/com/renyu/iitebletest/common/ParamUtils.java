@@ -26,6 +26,7 @@ public class ParamUtils {
     //ota UUID
     public static final UUID UUID_SERVICE_OTASERVICE=UUID.fromString("00060000-F8CE-11E4-ABF4-0002A5D5C51B");
     public static final UUID UUID_SERVICE_OTA=UUID.fromString("00060001-F8CE-11E4-ABF4-0002A5D5C51B");
+    public static final UUID UUID_DESCRIPTOR_OTA=UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     //BLE触发扫描指定
     public static final int BLE_COMMAND_SCAN=100;
@@ -108,6 +109,7 @@ public class ParamUtils {
     public static final int BLE_COMMAND_CONNECT=203;
     //OTA
     public static final int OTAEnterBootLoaderCmd=300;
+    public static boolean mFileupgradeStarted=false;
 
     public final static int RESULT_ENABLE_BT=1013;
     public final static int RESULT_QRCODE=1000;
@@ -117,4 +119,29 @@ public class ParamUtils {
     public static int currentUploadCount=0;
     //总上传数
     public static int totalUploadCount=0;
+
+
+    /**
+     * GATT Status constants
+     */
+    public final static String ACTION_GATT_CONNECTED =
+            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+    public final static String ACTION_GATT_DISCONNECTED =
+            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_DISCONNECTED_CAROUSEL =
+            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED_CAROUSEL";
+    public final static String ACTION_GATT_SERVICES_DISCOVERED =
+            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+    public final static String ACTION_DATA_AVAILABLE =
+            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+    public final static String ACTION_OTA_DATA_AVAILABLE =
+            "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
+    public final static String ACTION_GATT_DISCONNECTED_OTA =
+            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED_OTA";
+    public final static String ACTION_GATT_CONNECT_OTA =
+            "com.example.bluetooth.le.ACTION_GATT_CONNECT_OTA";
+    public final static String ACTION_GATT_SERVICES_DISCOVERED_OTA =
+            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED_OTA";
+    public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
+            "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
 }

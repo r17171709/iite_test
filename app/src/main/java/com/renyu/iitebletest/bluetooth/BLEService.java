@@ -6,9 +6,14 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -16,17 +21,22 @@ import android.util.Log;
 import com.cypress.cysmart.CommonUtils.Constants;
 import com.cypress.cysmart.CommonUtils.GattAttributes;
 import com.cypress.cysmart.CommonUtils.Utils;
-import com.cypress.cysmart.OTAFirmwareUpdate.OTAResponseReceiver;
+import com.cypress.cysmart.DataModelClasses.OTAFlashRowModel;
+import com.cypress.cysmart.OTAFirmwareUpdate.BootLoaderCommands;
+import com.cypress.cysmart.OTAFirmwareUpdate.BootLoaderUtils;
+import com.cypress.cysmart.OTAFirmwareUpdate.CustomFileReader;
+import com.cypress.cysmart.OTAFirmwareUpdate.FileReadStatusUpdater;
+import com.cypress.cysmart.OTAFirmwareUpdate.OTAFirmwareWrite;
 import com.renyu.iitebletest.common.ParamUtils;
 import com.renyu.iitebletest.model.BLECommandModel;
 import com.renyu.iitebletest.model.BLEConnectModel;
 
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -40,7 +50,7 @@ import rx.schedulers.Schedulers;
 /**
  * Created by renyu on 16/2/29.
  */
-public class BLEService extends Service {
+public class BLEService extends Service implements FileReadStatusUpdater {
 
     MyLeScanCallback callback;
     //扫描到的所有设备
@@ -55,7 +65,212 @@ public class BLEService extends Service {
     //断开连接是否需要发送广播
     boolean needBroadcast=true;
 
+    //是否进入bootloader模式
+    boolean isBootloader=false;
+
+    //***********************************************************
+
+    private static String mSiliconID;
+    private static String mSiliconRev;
+    private static String mCheckSumType;
+    private boolean HANDLER_FLAG = true;
+    private int mTotalLines = 0;
+    private ArrayList<OTAFlashRowModel> mFlashRowList;
+    //本次连接设备的地址
+    private String mBluetoothDeviceAddress;
+    //ota特征值
+    private BluetoothGattCharacteristic mOTACharacteristic;
+    //自定义ota写对象
+    private OTAFirmwareWrite otaFirmwareWrite;
     private static boolean m_otaExitBootloaderCmdInProgress = false;
+    private int mProgressBarPosition = 0;
+
+    BroadcastReceiver receiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String sharedPrefStatus = Utils.getStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE);
+                final String action = intent.getAction();
+                Bundle extras = intent.getExtras();
+                if (BootLoaderUtils.ACTION_OTA_STATUS.equals(action)) {
+                    if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.ENTER_BOOTLOADER)) {
+                        String siliconIDReceived, siliconRevReceived;
+                        if (extras.containsKey(Constants.EXTRA_SILICON_ID) && extras.containsKey(Constants.EXTRA_SILICON_REV)) {
+                            siliconIDReceived = extras.getString(Constants.EXTRA_SILICON_ID);
+                            siliconRevReceived = extras.getString(Constants.EXTRA_SILICON_REV);
+                            if (siliconIDReceived.equalsIgnoreCase(mSiliconID) && siliconRevReceived.equalsIgnoreCase(mSiliconRev)) {
+                                /**
+                                 * SiliconID and SiliconRev Verified
+                                 * Sending Next coommand
+                                 */
+                                //Getting the arrayID
+                                OTAFlashRowModel modelData = mFlashRowList.get(0);
+                                byte[] data = new byte[1];
+                                data[0] = (byte) modelData.mArrayId;
+                                int dataLength = 1;
+                                /**
+                                 * Writing the next command
+                                 * Changing the shared preference value
+                                 */
+                                otaFirmwareWrite.OTAGetFlashSizeCmd(data, mCheckSumType, dataLength);
+                                Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.GET_FLASH_SIZE);
+                                Log.d("BLEService", "执行获取flash大小的命令");
+                            }
+                        }
+
+                    }
+                    else if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.GET_FLASH_SIZE)) {
+                        /**
+                         * verifying the rows to be programmed within the bootloadable area of flash
+                         * not done for time being
+                         */
+                        int PROGRAM_ROW_NO = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO);
+                        writeProgrammableData(PROGRAM_ROW_NO);
+                    }
+                    else if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.SEND_DATA)) {
+                        /**
+                         * verifying the status and sending the next command
+                         * Changing the shared preference value
+                         */
+                        if (extras.containsKey(Constants.EXTRA_SEND_DATA_ROW_STATUS)) {
+                            String statusReceived = extras.getString(Constants.EXTRA_SEND_DATA_ROW_STATUS);
+                            if (statusReceived.equalsIgnoreCase("00")) {
+                                //Succes status received.Send programmable data
+                                int PROGRAM_ROW_NO = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO);
+                                writeProgrammableData(PROGRAM_ROW_NO);
+                            }
+                        }
+                    }
+                    else if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.PROGRAM_ROW)) {
+                        String statusReceived;
+                        if (extras.containsKey(Constants.EXTRA_PROGRAM_ROW_STATUS)) {
+                            statusReceived = extras.getString(Constants.EXTRA_PROGRAM_ROW_STATUS);
+                            if (statusReceived.equalsIgnoreCase("00")) {
+                                /**
+                                 * Program Row Status Verified
+                                 * Sending Next coommand
+                                 */
+                                //Getting the arrayI
+                                int PROGRAM_ROW = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO);
+                                OTAFlashRowModel modelData = mFlashRowList.get(PROGRAM_ROW);
+                                long rowMSB = Long.parseLong(modelData.mRowNo.substring(0, 2), 16);
+                                long rowLSB = Long.parseLong(modelData.mRowNo.substring(2, 4), 16);
+                                /**
+                                 * Writing the next command
+                                 * Changing the shared preference value
+                                 */
+                                otaFirmwareWrite.OTAVerifyRowCmd(rowMSB, rowLSB, modelData, mCheckSumType);
+                                Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.VERIFY_ROW);
+                                Log.d("BLEService", "执行获取flash大小的命令");
+                            }
+                        }
+                    }
+                    else if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.VERIFY_ROW)) {
+                        String statusReceived, checksumReceived;
+                        if (extras.containsKey(Constants.EXTRA_VERIFY_ROW_STATUS) && extras.containsKey(Constants.EXTRA_VERIFY_ROW_CHECKSUM)) {
+                            statusReceived = extras.getString(Constants.EXTRA_VERIFY_ROW_STATUS);
+                            checksumReceived = extras.getString(Constants.EXTRA_VERIFY_ROW_CHECKSUM);
+                            if (statusReceived.equalsIgnoreCase("00")) {
+                                /**
+                                 * Program Row Status Verified
+                                 * Sending Next coommand
+                                 */
+                                int PROGRAM_ROW_NO = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO);
+                                //Getting the arrayID
+                                OTAFlashRowModel modelData = mFlashRowList.get(PROGRAM_ROW_NO);
+                                long rowMSB = Long.parseLong(modelData.mRowNo.substring(0, 2), 16);
+                                long rowLSB = Long.parseLong(modelData.mRowNo.substring(2, 4), 16);
+
+                                byte[] checkSumVerify = new byte[6];
+                                checkSumVerify[0] = (byte) modelData.mRowCheckSum;
+                                checkSumVerify[1] = (byte) modelData.mArrayId;
+                                checkSumVerify[2] = (byte) rowMSB;
+                                checkSumVerify[3] = (byte) rowLSB;
+                                checkSumVerify[4] = (byte) (modelData.mDataLength);
+                                checkSumVerify[5] = (byte) ((modelData.mDataLength) >> 8);
+                                String fileCheckSumCalculated = Integer.toHexString(BootLoaderUtils.calculateCheckSumVerifyRow(6, checkSumVerify));
+                                int fileCheckSumCalculatedLength = fileCheckSumCalculated.length();
+                                String fileCheckSumByte = fileCheckSumCalculated.substring((fileCheckSumCalculatedLength - 2), fileCheckSumCalculatedLength);
+                                if (fileCheckSumByte.equalsIgnoreCase(checksumReceived)) {
+                                    PROGRAM_ROW_NO = PROGRAM_ROW_NO + 1;
+                                    //Shows ProgressBar status
+                                    showProgress(mProgressBarPosition, PROGRAM_ROW_NO, mFlashRowList.size());
+                                    if (PROGRAM_ROW_NO < mFlashRowList.size()) {
+                                        Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO, PROGRAM_ROW_NO);
+                                        Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS, 0);
+                                        writeProgrammableData(PROGRAM_ROW_NO);
+                                    }
+                                    if (PROGRAM_ROW_NO == mFlashRowList.size()) {
+                                        Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_NO, 0);
+                                        Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS, 0);
+                                        /**
+                                         * Writing the next command
+                                         * Changing the shared preference value
+                                         */
+                                        Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.VERIFY_CHECK_SUM);
+                                        otaFirmwareWrite.OTAVerifyCheckSumCmd(mCheckSumType);
+                                        Log.d("BLEService", "执行验证检查操作");
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                    else if (sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.VERIFY_CHECK_SUM)) {
+                        String statusReceived;
+                        if (extras.containsKey(Constants.EXTRA_VERIFY_CHECKSUM_STATUS)) {
+                            statusReceived = extras.getString(Constants.EXTRA_VERIFY_CHECKSUM_STATUS);
+                            if (statusReceived.equalsIgnoreCase("01")) {
+                                /**
+                                 * Verify Status Verified
+                                 * Sending Next coommand
+                                 */
+                                //Getting the arrayID
+                                otaFirmwareWrite.OTAExitBootloaderCmd(mCheckSumType);
+                                Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.EXIT_BOOTLOADER);
+                                Log.d("BLEService", "bootloader结束");
+                            }
+                        }
+
+                    }
+                    else if(sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands.EXIT_BOOTLOADER)){
+                        final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mBluetoothDeviceAddress);
+                        ParamUtils.mFileupgradeStarted = false;
+                        unpairDevice(device);
+                        saveDeviceAddress();
+                        Log.d("BLEService", "ota固件升级成功");
+                        if (secondFileUpdatedNeeded()) {
+                            Log.d("BLEService", "堆栈升级成功完成。应用程序升级悬而未决");
+                        }
+                        else {
+                            Log.d("BLEService", "ota固件升级成功");
+                        }
+                        ParamUtils.mFileupgradeStarted = false;
+                        closeAllBLEConnect();
+                        unpairDevice(device);
+                    }
+                    if (extras.containsKey(Constants.EXTRA_ERROR_OTA)) {
+                        String errorMessage = extras.getString(Constants.EXTRA_ERROR_OTA);
+                        Log.d("BLEService", errorMessage);
+                    }
+                }
+                if (action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
+                    final int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
+                    if (state == BluetoothDevice.BOND_BONDING) {
+                        // Bonding...
+                        Log.i("BLEService", "Bonding is in process....");
+                    }
+                    else if (state == BluetoothDevice.BOND_BONDED) {
+                        Log.d("BLEService", "Paired");
+                    }
+                    else if (state == BluetoothDevice.BOND_NONE) {
+                        Log.d("BLEService", "Unpaired");
+                    }
+                }
+            }
+        }
+    };
+
 
     @Override
     public void onCreate() {
@@ -63,6 +278,12 @@ public class BLEService extends Service {
 
         blestate= BLEConnectModel.BLESTATE.STATE_NOSCAN;
         deviceHashMap=new HashMap<>();
+
+        IntentFilter filter=new IntentFilter();
+        filter.addAction(BootLoaderUtils.ACTION_OTA_STATUS);
+        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        registerReceiver(receiver, filter);
+
     }
 
     @Nullable
@@ -193,6 +414,7 @@ public class BLEService extends Service {
             }
             else if (command==ParamUtils.BLE_COMMAND_UPDATE) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_UPDATE, null, this);
+                isBootloader = true;
             }
             else if (command==ParamUtils.BLE_COMMAND_GETV) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_GETV, null, this);
@@ -226,7 +448,9 @@ public class BLEService extends Service {
                 connectBLE(adapter.getRemoteDevice(intent.getExtras().getString("value")));
             }
             else if (command==ParamUtils.OTAEnterBootLoaderCmd) {
-
+                prepareFileWriting(intent.getExtras().getString("value"));
+                mProgressBarPosition = 1;
+                initializeBondingIFnotBonded();
             }
         }
         return super.onStartCommand(intent, flags, startId);
@@ -315,6 +539,7 @@ public class BLEService extends Service {
 //    }
 
     private void connectBLE(BluetoothDevice device) {
+        mBluetoothDeviceAddress = device.getAddress();
         closeAllBLEConnect();
         //超过30s还不能连接上，直接认为连接失败
         bleSubscription= Observable.timer(30, TimeUnit.SECONDS).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Action1<Long>() {
@@ -340,12 +565,27 @@ public class BLEService extends Service {
                 super.onCharacteristicRead(gatt, characteristic, status);
                 QueueUtils.getInstance().putReadCommand(characteristic.getValue(), characteristic.getUuid());
                 QueueUtils.getInstance().release();
+                BLEService.this.gatt=gatt;
             }
 
             @Override
             public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                 super.onCharacteristicWrite(gatt, characteristic, status);
+                if (isBootloader && status==0) {
+                    isBootloader=false;
+                    QueueUtils.getInstance().putOtaCommand();
+                }
                 QueueUtils.getInstance().release();
+                BLEService.this.gatt=gatt;
+
+                boolean isExitBootloaderCmd = false;
+                synchronized (BLEService.class) {
+                    isExitBootloaderCmd = m_otaExitBootloaderCmdInProgress;
+                    if(m_otaExitBootloaderCmdInProgress)
+                        m_otaExitBootloaderCmdInProgress = false;
+                }
+                if(isExitBootloaderCmd)
+                    onOtaExitBootloaderComplete(status);
             }
 
             @Override
@@ -358,16 +598,28 @@ public class BLEService extends Service {
 //                }
 //                Log.d("BLEService", "指令结果:"+new String(receive));
                 QueueUtils.getInstance().putCommand(characteristic.getValue());
+                BLEService.this.gatt=gatt;
+
+                //ota的指令
+                if (ParamUtils.UUID_SERVICE_OTA.toString().equals(characteristic.getUuid().toString())) {
+                    Intent intentOTA = new Intent(ParamUtils.ACTION_OTA_DATA_AVAILABLE);
+                    Bundle mBundle = new Bundle();
+                    mBundle.putByteArray(Constants.EXTRA_BYTE_VALUE, characteristic.getValue());
+                    mBundle.putString(Constants.EXTRA_BYTE_UUID_VALUE, characteristic.getUuid().toString());
+                    intentOTA.putExtras(mBundle);
+                    sendBroadcast(intentOTA);
+                }
             }
 
             @Override
             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                 super.onConnectionStateChange(gatt, status, newState);
+                BLEService.this.gatt=gatt;
                 switch (newState) {
                     case BluetoothProfile.STATE_CONNECTED:
-                        gatt.discoverServices();
                         Log.d("BLEService", "BLE设备连接成功");
                         Log.d("BLEService", "BLE设备正在配置服务中");
+                        gatt.discoverServices();
                         break;
                     case BluetoothProfile.STATE_DISCONNECTED:
                         Log.d("BLEService", "BLE设备连接断开");
@@ -385,6 +637,7 @@ public class BLEService extends Service {
             @Override
             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
                 super.onServicesDiscovered(gatt, status);
+                BLEService.this.gatt=gatt;
                 if (status==BluetoothGatt.GATT_SUCCESS) {
                     Log.d("BLEService", "BLE设备配置服务成功");
 
@@ -394,23 +647,47 @@ public class BLEService extends Service {
                         closeAllBLEConnect();
                     }
                     else {
-                        //开启通知服务
-                        BluetoothGattCharacteristic characteristic = gatt.getService(ParamUtils.UUID_SERVICE_MILI).getCharacteristic(ParamUtils.UUID_SERVICE_READ);
-                        if (enableNotification(characteristic, gatt, ParamUtils.UUID_DESCRIPTOR)) {
-                            BLEConnectModel model=new BLEConnectModel();
-                            model.setBlestate(BLEConnectModel.BLESTATE.STATE_CONNECTED);
-                            EventBus.getDefault().post(model);
+                        if (checkIsOTA()) {
+                            //开启通知服务
+                            BluetoothGattCharacteristic characteristic = gatt.getService(ParamUtils.UUID_SERVICE_OTASERVICE).getCharacteristic(ParamUtils.UUID_SERVICE_OTA);
+                            if (enableNotification(characteristic, gatt, ParamUtils.UUID_DESCRIPTOR_OTA)) {
+                                mOTACharacteristic=characteristic;
 
-                            blestate= BLEConnectModel.BLESTATE.STATE_CONNECTED;
+                                BLEConnectModel model=new BLEConnectModel();
+                                model.setBlestate(BLEConnectModel.BLESTATE.STATE_OTA);
+                                EventBus.getDefault().post(model);
 
-                            bleSubscription.unsubscribe();
+                                blestate= BLEConnectModel.BLESTATE.STATE_OTA;
 
-                            Intent intent=new Intent();
-                            intent.setAction("BLE_RETRY_DIS");
-                            sendBroadcast(intent);
+                                bleSubscription.unsubscribe();
+
+                                Intent intent=new Intent();
+                                intent.setAction("BLE_RETRY_DIS");
+                                sendBroadcast(intent);
+                            }
+                            else {
+                                closeAllBLEConnect();
+                            }
                         }
                         else {
-                            closeAllBLEConnect();
+                            //开启通知服务
+                            BluetoothGattCharacteristic characteristic = gatt.getService(ParamUtils.UUID_SERVICE_MILI).getCharacteristic(ParamUtils.UUID_SERVICE_READ);
+                            if (enableNotification(characteristic, gatt, ParamUtils.UUID_DESCRIPTOR)) {
+                                BLEConnectModel model=new BLEConnectModel();
+                                model.setBlestate(BLEConnectModel.BLESTATE.STATE_CONNECTED);
+                                EventBus.getDefault().post(model);
+
+                                blestate= BLEConnectModel.BLESTATE.STATE_CONNECTED;
+
+                                bleSubscription.unsubscribe();
+
+                                Intent intent=new Intent();
+                                intent.setAction("BLE_RETRY_DIS");
+                                sendBroadcast(intent);
+                            }
+                            else {
+                                closeAllBLEConnect();
+                            }
                         }
                     }
                 }
@@ -424,6 +701,8 @@ public class BLEService extends Service {
             @Override
             public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
                 super.onReadRemoteRssi(gatt, rssi, status);
+
+                BLEService.this.gatt=gatt;
 
                 BLECommandModel model=new BLECommandModel();
                 model.setCommand(ParamUtils.BLE_COMMAND_RSSI);
@@ -471,6 +750,8 @@ public class BLEService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        unregisterReceiver(receiver);
     }
 
     /**
@@ -550,21 +831,79 @@ public class BLEService extends Service {
         }
     }
 
-    public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {
-        synchronized (BLEService.class) {
-            writeOTABootLoaderCommand(characteristic, value);
-            if(isExitBootloaderCmd)
-                m_otaExitBootloaderCmdInProgress = true;
+    private void prepareFileWriting(String mCurrentFilePath) {
+        Utils.setIntSharedPreference(this, Constants.PREF_PROGRAM_ROW_NO, 0);
+        Utils.setIntSharedPreference(this, Constants.PREF_PROGRAM_ROW_START_POS, 0);
+        if (mOTACharacteristic != null) {
+            otaFirmwareWrite = new OTAFirmwareWrite(mOTACharacteristic);
+        }
+        final CustomFileReader customFileReader;
+        customFileReader = new CustomFileReader(mCurrentFilePath);
+        customFileReader.setFileReadStatusUpdater(this);
+        String[] headerData = customFileReader.analyseFileHeader();
+        mSiliconID = headerData[0];
+        mSiliconRev = headerData[1];
+        mCheckSumType = headerData[2];
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (HANDLER_FLAG) {
+                    mTotalLines = customFileReader.getTotalLines();
+                    mFlashRowList = customFileReader.readDataLines();
+                }
+            }
+        }, 1000);
+    }
+
+    private void initializeBondingIFnotBonded() {
+        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mBluetoothDeviceAddress);
+        if (!getBondedState()) {
+            pairDevice(device);
+
         }
     }
 
-    public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value) {
-        String serviceUUID = characteristic.getService().getUuid().toString();
-        String serviceName = GattAttributes.lookup(serviceUUID, serviceUUID);
+    private boolean getBondedState() {
+        Boolean bonded;
+        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mBluetoothDeviceAddress);
+        bonded = device.getBondState() == BluetoothDevice.BOND_BONDED;
+        return bonded;
+    }
 
-        String characteristicUUID = characteristic.getUuid().toString();
-        String characteristicName = GattAttributes.lookup(characteristicUUID, characteristicUUID);
+    //For Pairing
+    private void pairDevice(BluetoothDevice device) {
+        try {
+            Method m = device.getClass().getMethod("createBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
+    }
+
+    //For UnPairing
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {
+        synchronized (BLEService.class) {
+            writeOTABootLoaderCommand(characteristic, value);
+            if (isExitBootloaderCmd) {
+                m_otaExitBootloaderCmdInProgress = true;
+            }
+        }
+    }
+
+    public synchronized static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value) {
+        String serviceName = GattAttributes.lookupUUID(characteristic.getService().getUuid(), characteristic.getService().getUuid().toString());
+        String characteristicName = GattAttributes.lookupUUID(characteristic.getUuid(), characteristic.getUuid().toString());
         String characteristicValue = Utils.ByteArraytoHex(value);
         if ( gatt == null) {
             return;
@@ -592,9 +931,9 @@ public class BLEService extends Service {
             if(status) {
                 String dataLog =
                         "[" + serviceName + "|" + characteristicName + "] " +
-                        "Write request sent with value, " +
+                                "Write request sent with value, " +
 
-                        "[ " + characteristicValue + " ]";
+                                "[ " + characteristicValue + " ]";
                 Log.i("CYSMART", dataLog);
                 Log.v("CYSMART", dataLog);
             }
@@ -602,14 +941,129 @@ public class BLEService extends Service {
                 Log.v("CYSMART", "writeOTABootLoaderCommand failed!");
             }
         }
+    }
 
+
+    private void writeProgrammableData(int rowPosition) {
+        int startPosition = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS);
+        Log.e("BLEService", "Row: " + rowPosition + "Start Pos: " + startPosition);
+        OTAFlashRowModel modelData = mFlashRowList.get(rowPosition);
+        int verifyDataLength = modelData.mDataLength - startPosition;
+        if (checkProgramRowCommandToSend(verifyDataLength)) {
+            long rowMSB = Long.parseLong(modelData.mRowNo.substring(0, 2), 16);
+            long rowLSB = Long.parseLong(modelData.mRowNo.substring(2, 4), 16);
+            int dataLength = modelData.mDataLength - startPosition;
+            byte[] dataToSend = new byte[dataLength];
+            for (int pos = 0; pos < dataLength; pos++) {
+                if (startPosition < modelData.mData.length) {
+                    byte data = modelData.mData[startPosition];
+                    dataToSend[pos] = data;
+                    startPosition++;
+                } else {
+                    break;
+                }
+            }
+            otaFirmwareWrite.OTAProgramRowCmd(rowMSB, rowLSB, modelData.mArrayId, dataToSend, mCheckSumType);
+            Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE,  ""+BootLoaderCommands.PROGRAM_ROW);
+            Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS, 0);
+            Log.d("BLEService", "固件升级中");
+        }
+        else {
+            int dataLength = BootLoaderCommands.MAX_DATA_SIZE;
+            byte[] dataToSend = new byte[dataLength];
+            for (int pos = 0; pos < dataLength; pos++) {
+                if (startPosition < modelData.mData.length) {
+                    byte data = modelData.mData[startPosition];
+                    dataToSend[pos] = data;
+                    startPosition++;
+                }
+                else {
+                    break;
+                }
+            }
+            otaFirmwareWrite.OTAProgramRowSendDataCmd(dataToSend, mCheckSumType);
+            Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.SEND_DATA);
+            Utils.setIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS, startPosition);
+            Log.d("BLEService", "固件升级中");
+        }
+    }
+
+    /**
+     * Method to show progress bar
+     *
+     * @param fileLineNos
+     * @param totalLines
+     */
+
+    private void showProgress(int fileStatus, float fileLineNos, float totalLines) {
+        if (fileStatus == 1) {
+            Log.i("BLEService", (int) fileLineNos+"  "+(int) totalLines+"  "+(int) ((fileLineNos / totalLines) * 100) + "%");
+        }
+        if (fileStatus == 2) {
+            Log.d("BLEService", "结束");
+        }
+    }
+
+    private boolean checkProgramRowCommandToSend(int totalSize) {
+        if (totalSize <= BootLoaderCommands.MAX_DATA_SIZE) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private void onOtaExitBootloaderComplete(int status) {
         Bundle bundle = new Bundle();
         bundle.putByteArray(Constants.EXTRA_BYTE_VALUE, new byte[]{(byte)status});
-        Intent intentOTA = new Intent(OTAResponseReceiver.ACTION_OTA_DATA_AVAILABLE);
+        Intent intentOTA = new Intent(ParamUtils.ACTION_OTA_DATA_AVAILABLE);
         intentOTA.putExtras(bundle);
         sendBroadcast(intentOTA);
+    }
+
+    private boolean secondFileUpdatedNeeded() {
+        String secondFilePath = Utils.getStringSharedPreference(BLEService.this, Constants.PREF_OTA_FILE_TWO_PATH);
+        Log.e("BLEService", "secondFilePath-->" + secondFilePath);
+        return mBluetoothDeviceAddress.equalsIgnoreCase(saveDeviceAddress())
+                && (!secondFilePath.equalsIgnoreCase("Default")
+                && (!secondFilePath.equalsIgnoreCase("")));
+    }
+
+    /**
+     * Returns saved device adress
+     *
+     * @return
+     */
+    private String saveDeviceAddress() {
+        Utils.setStringSharedPreference(BLEService.this, Constants.PREF_DEV_ADDRESS, mBluetoothDeviceAddress);
+        return Utils.getStringSharedPreference(BLEService.this, Constants.PREF_DEV_ADDRESS);
+    }
+
+    /**
+     * 检查是否进入OTA模式
+     */
+    public boolean checkIsOTA() {
+        List<BluetoothGattService> gattServices=gatt.getServices();
+        for (BluetoothGattService gattService : gattServices) {
+            Log.d("BLEService", gattService.getUuid().toString());
+            if (gattService.getUuid().toString().equals(ParamUtils.UUID_SERVICE_OTASERVICE.toString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void onFileReadProgressUpdate(int fileLine) {
+        if (this.mTotalLines <= 0 || fileLine > 0) {
+
+        }
+        if (this.mTotalLines == fileLine && mOTACharacteristic != null) {
+            Log.d("BLEService", "文件读取成功");
+            Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "56");
+            ParamUtils.mFileupgradeStarted = true;
+            otaFirmwareWrite.OTAEnterBootLoaderCmd(mCheckSumType);
+            Log.d("BLEService", "执行进入bootloader方法");
+        }
+
     }
 }

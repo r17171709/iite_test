@@ -1,37 +1,3 @@
-/*
- * Copyright Cypress Semiconductor Corporation, 2014-2015 All rights reserved.
- *
- * This software, associated documentation and materials ("Software") is
- * owned by Cypress Semiconductor Corporation ("Cypress") and is
- * protected by and subject to worldwide patent protection (UnitedStates and foreign),
- * United States copyright laws and international
- * treaty provisions. Therefore, unless otherwise specified in a separate
- * license agreement between you and Cypress, this Software
- * must be treated like any other copyrighted material. Reproduction,
- * modification, translation, compilation, or representation of this
- * Software in any other form (e.g., paper, magnetic, optical, silicon)
- * is prohibited without Cypress's express written permission.
- *
- * Disclaimer: THIS SOFTWARE IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY
- * KIND, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
- * NONINFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE. Cypress reserves the right to make changes
- * to the Software without notice. Cypress does not assume any liability
- * arising out of the application or use of Software or any product or
- * circuit described in the Software. Cypress does not authorize its
- * products for use as critical components in any products where a
- * malfunction or failure may reasonably be expected to result in
- * significant injury or death ("High Risk Product"). By including
- * Cypress's product in a High Risk Product, the manufacturer of such
- * system or application assumes all risk of such use and in doing so
- * indemnifies Cypress against all liability.
- *
- * Use of this Software may be limited by and subject to the applicable
- * Cypress software license agreement.
- *
- *
- */
-
 package com.cypress.cysmart.OTAFirmwareUpdate;
 
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -40,219 +6,145 @@ import android.util.Log;
 import com.cypress.cysmart.DataModelClasses.OTAFlashRowModel;
 import com.renyu.iitebletest.bluetooth.BLEService;
 
-/**
- * Separate class for handling the write operation during OTA firmware upgrade
- */
 public class OTAFirmwareWrite {
-
-    private String TAG="OTAFirmwareWrite";
-
+    private static final int ADDITIVE_OP = 8;
+    private static final int BYTE_ARRAY_ID = 4;
+    private static final int BYTE_ARRAY_SIZE = 7;
+    private static final int BYTE_CHECKSUM = 4;
+    private static final int BYTE_CHECKSUM_SHIFT = 5;
+    private static final int BYTE_CHECKSUM_VER_ROW = 7;
+    private static final int BYTE_CHECKSUM_VER_ROW_SHIFT = 8;
+    private static final int BYTE_CMD_DATA_SIZE = 2;
+    private static final int BYTE_CMD_DATA_SIZE_SHIFT = 3;
+    private static final int BYTE_CMD_TYPE = 1;
+    private static final int BYTE_PACKET_END = 6;
+    private static final int BYTE_PACKET_END_VER_ROW = 9;
+    private static final int BYTE_ROW = 5;
+    private static final int BYTE_ROW_SHIFT = 6;
+    private static final int BYTE_START_CMD = 0;
+    private static final int RADIX = 16;
     private BluetoothGattCharacteristic mOTACharacteristic;
-
-    private int ONE = 1;
-    private int TWO = 2;
-    private int THREE = 3;
-    private int FOUR = 4;
-    private int FIVE = 5;
-    private int SIX = 6;
-    private int SEVEN = 7;
-    private int EIGHT = 8;
-    private int NINE = 9;
-    private int TEN = 10;
-    private int ELEVEN = 11;
-    private int TWELVE = 12;
-    private int FOURTEEN = 14;
-    private int SIXTEEN = 16;
-
 
     public OTAFirmwareWrite(BluetoothGattCharacteristic writeCharacteristic) {
         this.mOTACharacteristic = writeCharacteristic;
     }
 
-    /**
-     * OTA Bootloader enter command method
-     *
-     * @param checkSumType
-     */
     public void OTAEnterBootLoaderCmd(String checkSumType) {
-        int startCommand = 0x01;
-        int dataLength0 = 0x00;
-        int dataLength1 = 0x00;
-
-        byte[] commandBytes = new byte[7];
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.ENTER_BOOTLOADER;
-        commandBytes[2] = (byte) dataLength0;
-        commandBytes[3] = (byte) dataLength1;
-        String checkSum = Integer.toHexString(BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16), 4, commandBytes));
-        long checksum = Long.parseLong(checkSum, 16);
-        commandBytes[4] = (byte) checksum;
-        commandBytes[5] = (byte) (checksum >> 8);
-        commandBytes[6] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAEnterBootLoaderCmd");
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+        byte[] commandBytes = new byte[BYTE_CHECKSUM_VER_ROW];
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 56;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) BYTE_START_CMD;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) BYTE_START_CMD;
+        long checksum = Long.parseLong(Integer.toHexString(BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), BYTE_CHECKSUM, commandBytes)), RADIX);
+        commandBytes[BYTE_CHECKSUM] = (byte) ((int) checksum);
+        commandBytes[BYTE_ROW] = (byte) ((int) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT));
+        commandBytes[BYTE_ROW_SHIFT] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAEnterBootLoaderCmd");
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-    /**
-     * OTA Bootloader Get Flash Size Command
-     */
     public void OTAGetFlashSizeCmd(byte[] data, String checkSumType, int dataLength) {
-        byte[] commandBytes = new byte[BootLoaderCommands.BASE_CMD_SIZE + dataLength];
-        int startCommand = 0x01;
-        int dataLength1 = 0x00;
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.GET_FLASH_SIZE;
-        commandBytes[2] = (byte) dataLength;
-        commandBytes[3] = (byte) dataLength1;
-        int dataByteLocationStart = 4;
-        int datByteLocationEnd;
-        for (int count = 0; count < dataLength; count++) {
+        byte[] commandBytes = new byte[(dataLength + BYTE_CHECKSUM_VER_ROW)];
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 50;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) dataLength;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) (dataLength >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        int dataByteLocationStart = BYTE_CHECKSUM;
+        for (int count = BYTE_START_CMD; count < dataLength; count += BYTE_CMD_TYPE) {
             commandBytes[dataByteLocationStart] = data[count];
-            dataByteLocationStart++;
+            dataByteLocationStart += BYTE_CMD_TYPE;
         }
-        datByteLocationEnd = dataByteLocationStart;
-        String checkSum = Integer.toHexString(BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16), 4, commandBytes));
-        long checksum = Long.parseLong(checkSum, 16);
-        commandBytes[datByteLocationEnd] = (byte) checksum;
-        commandBytes[datByteLocationEnd + 1] = (byte) (checksum >> 8);
-        commandBytes[datByteLocationEnd + 2] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAGetFlashSizeCmd");
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+        int datByteLocationEnd = dataByteLocationStart;
+        long checksum = Long.parseLong(Integer.toHexString(BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), commandBytes.length, commandBytes)), RADIX);
+        commandBytes[datByteLocationEnd] = (byte) ((int) checksum);
+        commandBytes[datByteLocationEnd + BYTE_CMD_TYPE] = (byte) ((int) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT));
+        commandBytes[datByteLocationEnd + BYTE_CMD_DATA_SIZE] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAGetFlashSizeCmd");
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-    public void OTAProgramRowSendDataCmd(byte[] data,
-                                         String checksumType) {
-        int totalSize = BootLoaderCommands.BASE_CMD_SIZE +
-                data.length;
-        int checksum;
-        int i;
+    public void OTAProgramRowSendDataCmd(byte[] data, String checksumType) {
+        int totalSize = data.length + BYTE_CHECKSUM_VER_ROW;
         byte[] commandBytes = new byte[totalSize];
-        int startCommand = 0x01;
-
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.SEND_DATA;
-        commandBytes[2] = (byte) (data.length);
-        commandBytes[3] = (byte) ((int) ((data.length) >> 8));
-        for (i = 0; i < data.length; i++)
-            commandBytes[i + 4] = data[i];
-        checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checksumType, 16),
-                data.length + 4, commandBytes);
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 55;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) data.length;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) (data.length >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        for (int i = BYTE_START_CMD; i < data.length; i += BYTE_CMD_TYPE) {
+            commandBytes[i + BYTE_CHECKSUM] = data[i];
+        }
+        int checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checksumType, RADIX), data.length + BYTE_CHECKSUM, commandBytes);
         commandBytes[totalSize - 3] = (byte) checksum;
-        commandBytes[totalSize - 2] = (byte) (checksum >> 8);
-        commandBytes[totalSize - 1] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAProgramRowSendDataCmd Send size--->" + commandBytes.length);
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+        commandBytes[totalSize - 2] = (byte) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[totalSize - 1] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAProgramRowSendDataCmd Send size--->" + commandBytes.length);
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-
-    /*
-    *
-    * OTA Bootloader Program row Command
-    * */
-    public void OTAProgramRowCmd(long rowMSB, long rowLSB, int arrayID, byte[] data,
-                                 String checkSumType) {
-
-        int COMMAND_DATA_SIZE = 3;
-        int totalSize = BootLoaderCommands.BASE_CMD_SIZE + COMMAND_DATA_SIZE +
-                data.length;
-        int checksum;
-        int i;
+    public void OTAProgramRowCmd(long rowMSB, long rowLSB, int arrayID, byte[] data, String checkSumType) {
+        int totalSize = data.length + 10;
         byte[] commandBytes = new byte[totalSize];
-        int startCommand = 0x01;
-
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.PROGRAM_ROW;
-        commandBytes[2] = (byte) (data.length + COMMAND_DATA_SIZE);
-        commandBytes[3] = (byte) ((int) ((data.length + COMMAND_DATA_SIZE) >> 8));
-        commandBytes[4] = (byte) arrayID;
-        commandBytes[5] = (byte) rowMSB;
-        commandBytes[6] = (byte) rowLSB;
-        for (i = 0; i < data.length; i++)
-            commandBytes[i + 7] = data[i];
-        checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16),
-                data.length + 7, commandBytes);
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 57;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) (data.length + BYTE_CMD_DATA_SIZE_SHIFT);
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) ((data.length + BYTE_CMD_DATA_SIZE_SHIFT) >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[BYTE_CHECKSUM] = (byte) arrayID;
+        commandBytes[BYTE_ROW] = (byte) ((int) rowMSB);
+        commandBytes[BYTE_ROW_SHIFT] = (byte) ((int) rowLSB);
+        for (int i = BYTE_START_CMD; i < data.length; i += BYTE_CMD_TYPE) {
+            commandBytes[i + BYTE_CHECKSUM_VER_ROW] = data[i];
+        }
+        int checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), data.length + BYTE_CHECKSUM_VER_ROW, commandBytes);
         commandBytes[totalSize - 3] = (byte) checksum;
-        commandBytes[totalSize - 2] = (byte) (checksum >> 8);
-        commandBytes[totalSize - 1] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAProgramRowCmd send size--->" + commandBytes.length);
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+        commandBytes[totalSize - 2] = (byte) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[totalSize - 1] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAProgramRowCmd send size--->" + commandBytes.length);
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-    /*
-   *
-   * OTA Bootloader Verify row Command
-   * */
-    public void OTAVerifyRowCmd(long rowMSB, long rowLSB, OTAFlashRowModel model,
-                                String checkSumType) {
-        int COMMAND_DATA_SIZE = 3;
-        int COMMAND_SIZE = BootLoaderCommands.BASE_CMD_SIZE + COMMAND_DATA_SIZE;
-        int checksum;
-        byte[] commandBytes = new byte[COMMAND_SIZE];
-        int startCommand = 0x01;
-
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.VERIFY_ROW;
-        commandBytes[2] = (byte) (COMMAND_DATA_SIZE);
-        commandBytes[3] = (byte) (COMMAND_DATA_SIZE >> 8);
-        commandBytes[4] = (byte) model.mArrayId;
-        commandBytes[5] = (byte) rowMSB;
-        commandBytes[6] = (byte) rowLSB;
-        checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16),
-                COMMAND_SIZE - 3, commandBytes);
-        commandBytes[7] = (byte) checksum;
-        commandBytes[8] = (byte) (checksum >> 8);
-        commandBytes[9] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAVerifyRowCmd");
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+    public void OTAVerifyRowCmd(long rowMSB, long rowLSB, OTAFlashRowModel model, String checkSumType) {
+        byte[] commandBytes = new byte[(BYTE_CMD_DATA_SIZE_SHIFT + BYTE_CHECKSUM_VER_ROW)];
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 58;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) BYTE_CMD_DATA_SIZE_SHIFT;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) BYTE_START_CMD;
+        commandBytes[BYTE_CHECKSUM] = (byte) model.mArrayId;
+        commandBytes[BYTE_ROW] = (byte) ((int) rowMSB);
+        commandBytes[BYTE_ROW_SHIFT] = (byte) ((int) rowLSB);
+        int checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), BYTE_CHECKSUM_VER_ROW, commandBytes);
+        commandBytes[BYTE_CHECKSUM_VER_ROW] = (byte) checksum;
+        commandBytes[BYTE_CHECKSUM_VER_ROW_SHIFT] = (byte) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[BYTE_PACKET_END_VER_ROW] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAVerifyRowCmd");
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-    /*
-   *
-   * OTA Verify CheckSum Command
-   * */
     public void OTAVerifyCheckSumCmd(String checkSumType) {
-
-        int checksum;
-        byte[] commandBytes = new byte[BootLoaderCommands.BASE_CMD_SIZE];
-        int startCommand = 0x01;
-
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.VERIFY_CHECK_SUM;
-        commandBytes[2] = (byte) (0);
-        commandBytes[3] = (byte) (0);
-        checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16),
-                BootLoaderCommands.BASE_CMD_SIZE - 3, commandBytes);
-        commandBytes[4] = (byte) checksum;
-        commandBytes[5] = (byte) (checksum >> 8);
-        commandBytes[6] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAVerifyCheckSumCmd");
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes);
+        byte[] commandBytes = new byte[BYTE_CHECKSUM_VER_ROW];
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 49;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) 0;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) 0;
+        int checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), BYTE_CHECKSUM, commandBytes);
+        commandBytes[BYTE_CHECKSUM] = (byte) checksum;
+        commandBytes[BYTE_ROW] = (byte) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[BYTE_ROW_SHIFT] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAVerifyCheckSumCmd");
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes);
     }
 
-    /*
-     *
-     * Exit BootloaderCommand
-     *
-     * */
     public void OTAExitBootloaderCmd(String checkSumType) {
-
-        int COMMAND_DATA_SIZE = 0x00;
-        int COMMAND_SIZE = BootLoaderCommands.BASE_CMD_SIZE + COMMAND_DATA_SIZE;
-        int checksum;
-        byte[] commandBytes = new byte[BootLoaderCommands.BASE_CMD_SIZE];
-        int startCommand = 0x01;
-
-        commandBytes[0] = (byte) startCommand;
-        commandBytes[1] = (byte) BootLoaderCommands.EXIT_BOOTLOADER;
-        commandBytes[2] = (byte) (COMMAND_DATA_SIZE);
-        commandBytes[3] = (byte) (COMMAND_DATA_SIZE >> 8);
-        checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, 16),
-                COMMAND_SIZE - 3, commandBytes);
-        commandBytes[4] = (byte) checksum;
-        commandBytes[5] = (byte) (checksum >> 8);
-        commandBytes[6] = (byte) BootLoaderCommands.PACKET_END;
-        Log.e(TAG, "OTAExitBootloaderCmd");
-        BLEService.writeOTABootLoaderCommand(mOTACharacteristic, commandBytes, true);
+        int COMMAND_SIZE = BYTE_START_CMD + BYTE_CHECKSUM_VER_ROW;
+        byte[] commandBytes = new byte[BYTE_CHECKSUM_VER_ROW];
+        commandBytes[BYTE_START_CMD] = (byte) BYTE_CMD_TYPE;
+        commandBytes[BYTE_CMD_TYPE] = (byte) 59;
+        commandBytes[BYTE_CMD_DATA_SIZE] = (byte) BYTE_START_CMD;
+        commandBytes[BYTE_CMD_DATA_SIZE_SHIFT] = (byte) BYTE_START_CMD;
+        int checksum = BootLoaderUtils.calculateCheckSum2(Integer.parseInt(checkSumType, RADIX), BYTE_CHECKSUM, commandBytes);
+        commandBytes[BYTE_CHECKSUM] = (byte) checksum;
+        commandBytes[BYTE_ROW] = (byte) (checksum >> BYTE_CHECKSUM_VER_ROW_SHIFT);
+        commandBytes[BYTE_ROW_SHIFT] = (byte) 23;
+        Log.e("OTAFirmwareWrite", "OTAExitBootloaderCmd");
+        BLEService.writeOTABootLoaderCommand(this.mOTACharacteristic, commandBytes, true);
     }
-
 }
