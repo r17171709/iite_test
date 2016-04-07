@@ -30,6 +30,9 @@ public class BLECheckModel {
     //检测结果
     @DatabaseField (columnName = "qc_result_a")
     String qc_result_a;
+    //cpu版本号
+    @DatabaseField (columnName = "cpuid")
+    String cpuid;
 
     public String getBd_sn() {
         return bd_sn;
@@ -85,5 +88,13 @@ public class BLECheckModel {
 
     public void setQc_result_a(String qc_result_a) {
         this.qc_result_a = qc_result_a;
+    }
+
+    public String getCpuid() {
+        return cpuid;
+    }
+
+    public void setCpuid(String cpuid) {
+        this.cpuid = cpuid;
     }
 }

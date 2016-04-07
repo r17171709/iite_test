@@ -431,6 +431,9 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             else if (command==ParamUtils.BLE_COMMAND_INFOVERSION) {
                 QueueUtils.getInstance().addReadTask(ParamUtils.UUID_SERVICE_DEVICEINFO, ParamUtils.UUID_SERVICE_DEVICEINFO_VERSION, this);
             }
+            else if (command==ParamUtils.BLE_COMMAND_CPUID) {
+                QueueUtils.getInstance().addReadTask(ParamUtils.UUID_SERVICE_DEVICEINFO, ParamUtils.UUID_SERVICE_DEVICEINFO_CPUID, this);
+            }
             else if (command==ParamUtils.BLE_COMMAND_LOGOUT) {
                 needBroadcast=false;
                 if (callback!=null) {
@@ -942,7 +945,6 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             }
         }
     }
-
 
     private void writeProgrammableData(int rowPosition) {
         int startPosition = Utils.getIntSharedPreference(BLEService.this, Constants.PREF_PROGRAM_ROW_START_POS);

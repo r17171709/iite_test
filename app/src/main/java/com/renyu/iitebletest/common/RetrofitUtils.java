@@ -69,7 +69,7 @@ public class RetrofitUtils {
      * @param command
      * @param allResult
      */
-    public void upload(final String uniqueid, String uid, String time, String battery, String rssi, boolean command, boolean allResult, final Context context) {
+    public void upload(String cpuid, final String uniqueid, String uid, String time, String battery, String rssi, boolean command, boolean allResult, final Context context) {
         UploadImpl upload=retrofit.create(UploadImpl.class);
         HashMap<String, String> params=new HashMap<>();
         params.put("bd_sn", uniqueid);
@@ -80,6 +80,7 @@ public class RetrofitUtils {
         params.put("qc_result_a", allResult?"pass":"fail");
         params.put("bd_swith", command?"pass":"fail");
         params.put("bd_rssi", rssi);
+        params.put("bootloaderVersion", cpuid);
 
         upload.upload(params).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
                 .unsubscribeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<ResponseModel>() {

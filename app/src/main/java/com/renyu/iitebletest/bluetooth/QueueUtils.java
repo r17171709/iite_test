@@ -266,6 +266,10 @@ public class QueueUtils {
             model.setCommand(ParamUtils.BLE_COMMAND_INFOVERSION);
             model.setValue(new String(bytes));
         }
+        else if (uuid.toString().equals(ParamUtils.UUID_SERVICE_DEVICEINFO_CPUID.toString())) {
+            model.setCommand(ParamUtils.BLE_COMMAND_CPUID);
+            model.setValue(new String(bytes));
+        }
         EventBus.getDefault().post(model);
     }
 

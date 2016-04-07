@@ -23,6 +23,7 @@ public class ParamUtils {
     public static final UUID UUID_SERVICE_DEVICEINFO_NAME=UUID.fromString("00002a29-0000-1000-8000-00805f9b34fb");
     public static final UUID UUID_SERVICE_DEVICEINFO_ID=UUID.fromString("00002a25-0000-1000-8000-00805f9b34fb");
     public static final UUID UUID_SERVICE_DEVICEINFO_VERSION=UUID.fromString("00002a26-0000-1000-8000-00805f9b34fb");
+    public static final UUID UUID_SERVICE_DEVICEINFO_CPUID=UUID.fromString("00002a27-0000-1000-8000-00805f9b34fb");
     //ota UUID
     public static final UUID UUID_SERVICE_OTASERVICE=UUID.fromString("00060000-F8CE-11E4-ABF4-0002A5D5C51B");
     public static final UUID UUID_SERVICE_OTA=UUID.fromString("00060001-F8CE-11E4-ABF4-0002A5D5C51B");
@@ -48,6 +49,8 @@ public class ParamUtils {
     public static final int BLE_COMMAND_INFOID=108;
     //BLE获取设备版本
     public static final int BLE_COMMAND_INFOVERSION=109;
+    //BLE芯片ID
+    public static final int BLE_COMMAND_CPUID=113;
     //BLE解除绑定
     public static final int BLE_COMMAND_LOGOUT=110;
     //BLE读取rssi

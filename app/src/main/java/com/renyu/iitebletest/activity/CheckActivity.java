@@ -58,6 +58,7 @@ public class CheckActivity extends BaseActivity {
     boolean command;
     String uniqueid;
     String deviceName="";
+    String cpuid="";
 
     @Override
     public int initContentView() {
@@ -86,7 +87,7 @@ public class CheckActivity extends BaseActivity {
                         ParamUtils.totalUploadCount=lists.size();
                         ParamUtils.currentUploadCount=0;
                         for (BLECheckModel list : lists) {
-                            RetrofitUtils.getInstance().upload(list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
+                            RetrofitUtils.getInstance().upload(list.getCpuid(), list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
                                     list.getBd_old(), list.getBd_rssi(), Boolean.parseBoolean(list.getBd_swith()),
                                     Boolean.parseBoolean(list.getQc_result_a()), CheckActivity.this);
                         }
@@ -131,6 +132,7 @@ public class CheckActivity extends BaseActivity {
                 }
                 checkModel.setBd_swith(""+command);
                 checkModel.setBd_rssi(""+rssiNum);
+                checkModel.setCpuid(cpuid);
                 Dao.getInstance(this).addData(checkModel);
                 showToast("保存成功");
                 closeBLE();
@@ -210,6 +212,9 @@ public class CheckActivity extends BaseActivity {
                 command=false;
             }
         }
+        else if (model.getCommand()==ParamUtils.BLE_COMMAND_CPUID) {
+            cpuid=model.getValue();
+        }
         else if (model.getCommand()==ParamUtils.BLE_COMMAND_GETUID) {
             try {
                 JSONObject object=new JSONObject(model.getValue());
@@ -236,6 +241,7 @@ public class CheckActivity extends BaseActivity {
                     sendCommand(ParamUtils.BLE_COMMAND_BATTERY);
                     sendCommand(ParamUtils.BLE_COMMAND_GETUID);
                     sendCommand(ParamUtils.BLE_COMMAND_TEST);
+                    sendCommand(ParamUtils.BLE_COMMAND_CPUID);
                 }
             });
         }
@@ -258,6 +264,7 @@ public class CheckActivity extends BaseActivity {
             batteryNum=0;
             uniqueid="";
             deviceName="";
+            cpuid="";
         }
         else if (blestate== BLEConnectModel.BLESTATE.STATE_CANCELSCAN) {
             dismissDialog();
