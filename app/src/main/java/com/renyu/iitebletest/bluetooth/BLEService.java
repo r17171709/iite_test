@@ -350,6 +350,9 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             else if (command==ParamUtils.BLE_COMMAND_GETUID) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_GETUID, null, this);
             }
+            else if (command==ParamUtils.BLE_COMMAND_TEST) {
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_TEST, null, this);
+            }
             else if (command==ParamUtils.BLE_COMMAND_SETUSERID) {
                 HashMap<String, String> params=new HashMap<>();
                 params.put("userid", "test");
@@ -517,14 +520,14 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                     if (name==null || name.equals("")) {
                         if (!deviceHashMap.containsKey(device.getName())) {
                             deviceHashMap.put(device.getName(), device1);
-                            EventBus.getDefault().post(device);
+                            EventBus.getDefault().post(device1);
                         }
                     }
                     else {
                         if (device.getName().equals(name) || device.getName().substring(device.getName().indexOf("-")+1).equals(name)) {
                             if (!deviceHashMap.containsKey(device.getName())) {
                                 deviceHashMap.put(device.getName(), device1);
-                                EventBus.getDefault().post(device);
+                                EventBus.getDefault().post(device1);
                             }
                         }
                     }

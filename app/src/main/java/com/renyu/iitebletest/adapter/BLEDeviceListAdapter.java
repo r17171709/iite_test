@@ -25,9 +25,9 @@ import butterknife.ButterKnife;
 public class BLEDeviceListAdapter extends RecyclerView.Adapter<BLEDeviceListAdapter.BLEDeviceListHolder> {
 
     Context context;
-    ArrayList<BluetoothDevice> models;
+    ArrayList<com.renyu.iitebletest.bluetooth.BluetoothDevice> models;
 
-    public BLEDeviceListAdapter(Context context, ArrayList<BluetoothDevice> models) {
+    public BLEDeviceListAdapter(Context context, ArrayList<com.renyu.iitebletest.bluetooth.BluetoothDevice> models) {
         this.context = context;
         this.models = models;
     }
@@ -40,18 +40,19 @@ public class BLEDeviceListAdapter extends RecyclerView.Adapter<BLEDeviceListAdap
 
     @Override
     public void onBindViewHolder(BLEDeviceListHolder holder, final int position) {
-        holder.adapter_bledevice.setText(models.get(position).getName()==null?"null":models.get(position).getName()+" "+models.get(position).getAddress());
+        holder.adapter_bledevice.setText(models.get(position).getDevice().getName()==null?"null":models.get(position).getDevice().getName()+" "+models.get(position).getDevice().getAddress());
         holder.adapter_bledevice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent=new Intent();
                 Bundle bundle=new Bundle();
-                bundle.putString("address", models.get(position).getAddress());
+                bundle.putString("address", models.get(position).getDevice().getAddress());
                 intent.putExtras(bundle);
                 ((BLEDeviceListActivity) context).setResult(Activity.RESULT_OK, intent);
                 ((BLEDeviceListActivity) context).finish();
             }
         });
+        holder.adapter_bledevice_rssi.setText(""+models.get(position).getRssi());
     }
 
     @Override
@@ -63,6 +64,8 @@ public class BLEDeviceListAdapter extends RecyclerView.Adapter<BLEDeviceListAdap
 
         @Bind(R.id.adapter_bledevice)
         TextView adapter_bledevice;
+        @Bind(R.id.adapter_bledevice_rssi)
+        TextView adapter_bledevice_rssi;
 
         public BLEDeviceListHolder(View itemView) {
             super(itemView);

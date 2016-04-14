@@ -12,6 +12,7 @@ import com.renyu.iitebletest.adapter.BLEDeviceListAdapter;
 import com.renyu.iitebletest.model.BLEConnectModel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import butterknife.Bind;
 import de.greenrobot.event.EventBus;
@@ -27,7 +28,7 @@ public class BLEDeviceListActivity extends BaseActivity {
     RecyclerView device_list;
     BLEDeviceListAdapter adapter;
 
-    ArrayList<BluetoothDevice> models;
+    ArrayList<com.renyu.iitebletest.bluetooth.BluetoothDevice> models;
 
     @Override
     public int initContentView() {
@@ -61,9 +62,26 @@ public class BLEDeviceListActivity extends BaseActivity {
         device_list.setAdapter(adapter);
     }
 
-    public void onEventMainThread(BluetoothDevice model) {
-        models.add(model);
-        adapter.notifyItemInserted(0);
+    public void onEventMainThread(com.renyu.iitebletest.bluetooth.BluetoothDevice model) {
+        if (models.size()==0) {
+            models.add(model);
+            adapter.notifyItemInserted(0);
+        }
+        else {
+            for (int i = 0; i < models.size(); i++) {
+                if (models.get(i).getRssi()<model.getRssi()) {
+                    models.add(i, model);
+                    adapter.notifyItemInserted(i);
+                    return;
+                }
+                if (i==models.size()-1) {
+                    models.add(model);
+                    adapter.notifyItemInserted(i);
+                    return;
+                }
+            }
+        }
+
     }
 
     public void onEventMainThread(BLEConnectModel model) {
