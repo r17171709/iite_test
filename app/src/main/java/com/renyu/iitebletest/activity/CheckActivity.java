@@ -124,7 +124,7 @@ public class CheckActivity extends BaseActivity {
                 checkModel.setQc_id_a(ParamUtils.IDS);
                 checkModel.setQc_date_a(""+System.currentTimeMillis());
                 checkModel.setBd_old(""+batteryNum);
-                if (battery && !command && rssi) {
+                if (battery && command && rssi) {
                     checkModel.setQc_result_a(""+true);
                 }
                 else {
