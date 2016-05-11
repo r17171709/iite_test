@@ -190,6 +190,10 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                                 checkSumVerify[5] = (byte) ((modelData.mDataLength) >> 8);
                                 String fileCheckSumCalculated = Integer.toHexString(BootLoaderUtils.calculateCheckSumVerifyRow(6, checkSumVerify));
                                 int fileCheckSumCalculatedLength = fileCheckSumCalculated.length();
+                                if(fileCheckSumCalculatedLength == 1){
+                                    fileCheckSumCalculated = "0" + fileCheckSumCalculated;
+                                    fileCheckSumCalculatedLength ++;
+                                }
                                 String fileCheckSumByte = fileCheckSumCalculated.substring((fileCheckSumCalculatedLength - 2), fileCheckSumCalculatedLength);
                                 if (fileCheckSumByte.equalsIgnoreCase(checksumReceived)) {
                                     PROGRAM_ROW_NO = PROGRAM_ROW_NO + 1;
