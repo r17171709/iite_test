@@ -33,6 +33,8 @@ public class BLECheckModel {
     //cpu版本号
     @DatabaseField (columnName = "cpuid")
     String cpuid;
+    @DatabaseField (columnName = "iite_sn")
+    String iite_sn;
 
     public String getBd_sn() {
         return bd_sn;
@@ -96,5 +98,13 @@ public class BLECheckModel {
 
     public void setCpuid(String cpuid) {
         this.cpuid = cpuid;
+    }
+
+    public String getIite_sn() {
+        return iite_sn;
+    }
+
+    public void setIite_sn(String iite_sn) {
+        this.iite_sn = iite_sn;
     }
 }

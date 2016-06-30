@@ -138,6 +138,47 @@
                 android:layout_width="200dip"
                 android:layout_height="0.5dip"
                 android:background="@android:color/white"></View>
+            <RelativeLayout
+                android:id="@+id/sn_search_result_layout"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="40dip">
+                <TextView
+                    android:layout_centerHorizontal="true"
+                    android:layout_centerVertical="true"
+                    android:text="4/ SN"
+                    android:textColor="@color/colorAccent"
+                    android:textSize="20sp"
+                    android:layout_width="157dip"
+                    android:layout_height="wrap_content" />
+                <TextView
+                    android:id="@+id/sn_search_result"
+                    android:layout_centerVertical="true"
+                    android:background="@android:color/white"
+                    android:layout_width="120dip"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginLeft="160dip"
+                    android:layout_height="25dip" />
+                <TextView
+                    android:id="@+id/sn_search_result_add"
+                    android:layout_toRightOf="@id/sn_search_result"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingRight="10dip"
+                    android:paddingLeft="10dip"
+                    android:paddingBottom="5dip"
+                    android:paddingTop="5dip"
+                    android:background="@drawable/shape_edit"
+                    android:textColor="@android:color/white"
+                    android:layout_centerVertical="true"
+                    android:layout_marginLeft="10dip"
+                    android:text="扫码"/>
+            </RelativeLayout>
+            <View
+                android:layout_width="200dip"
+                android:layout_height="0.5dip"
+                android:background="@android:color/white"></View>
         </LinearLayout>
         <Button
             android:id="@+id/save_result"
@@ -150,6 +191,7 @@
             android:textSize="20sp"
             android:layout_alignParentBottom="true"
             android:textColor="@color/colorPrimary"
+            android:enabled="false"
             android:background="@drawable/shape_botton_white"/>
     </LinearLayout>
     <android.support.v7.widget.Toolbar

@@ -20,7 +20,7 @@ public class Dao extends OrmLiteSqliteOpenHelper {
     private static Dao dao;
 
     private final static String databaseName="iitetest.db";
-    private final static int databaseVersion=1;
+    private final static int databaseVersion=2;
 
     public synchronized static Dao getInstance(Context context) {
         if (dao==null) {
@@ -49,7 +49,9 @@ public class Dao extends OrmLiteSqliteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, ConnectionSource connectionSource, int i, int i1) {
+        if (i==1 && i1==2) {
 
+        }
     }
 
     @Override

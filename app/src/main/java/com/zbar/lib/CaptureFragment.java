@@ -91,8 +91,6 @@ public class CaptureFragment extends BaseFragment implements SurfaceHolder.Callb
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-
-
         // 初始化 CameraManager
         CameraManager.init(getActivity().getApplicationContext());
         hasSurface = false;

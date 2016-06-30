@@ -7,7 +7,9 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.renyu.iitebletest.R;
@@ -31,8 +33,10 @@ import butterknife.Bind;
 import butterknife.OnClick;
 import de.greenrobot.event.EventBus;
 import rx.Observable;
+import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
+import rx.functions.Func3;
 import rx.schedulers.Schedulers;
 
 /**
@@ -50,6 +54,12 @@ public class CheckActivity extends BaseActivity {
     ImageView command_result;
     @Bind(R.id.battery_result)
     ImageView battery_result;
+    @Bind(R.id.sn_search_result)
+    TextView sn_search_result;
+    @Bind(R.id.sn_search_result_layout)
+    RelativeLayout sn_search_result_layout;
+    @Bind(R.id.save_result)
+    Button save_result;
 
     boolean battery;
     int batteryNum=0;
@@ -59,6 +69,10 @@ public class CheckActivity extends BaseActivity {
     String uniqueid;
     String deviceName="";
     String cpuid="";
+
+    Subscriber rssi_sub;
+    Subscriber command_sub;
+    Subscriber battery_sub;
 
     @Override
     public int initContentView() {
@@ -87,7 +101,7 @@ public class CheckActivity extends BaseActivity {
                         ParamUtils.totalUploadCount=lists.size();
                         ParamUtils.currentUploadCount=0;
                         for (BLECheckModel list : lists) {
-                            RetrofitUtils.getInstance().upload(list.getCpuid(), list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
+                            RetrofitUtils.getInstance().upload(list.getIite_sn(), list.getCpuid(), list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
                                     list.getBd_old(), list.getBd_rssi(), Boolean.parseBoolean(list.getBd_swith()),
                                     Boolean.parseBoolean(list.getQc_result_a()), CheckActivity.this);
                         }
@@ -103,6 +117,41 @@ public class CheckActivity extends BaseActivity {
         QueueUtils.getInstance();
 
         EventBus.getDefault().register(this);
+
+        Observable o_rssi=Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                rssi_sub=subscriber;
+            }
+        });
+        Observable o_command=Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                command_sub=subscriber;
+            }
+        });
+        Observable o_battery=Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                battery_sub=subscriber;
+            }
+        });
+        Observable.zip(o_rssi, o_command, o_battery, new Func3() {
+            @Override
+            public Object call(Object o, Object o2, Object o3) {
+                return "OK";
+            }
+        }).subscribe(new Action1() {
+            @Override
+            public void call(Object o) {
+                if (o.toString().equals("OK")) {
+                    if (battery && rssi && command) {
+                        sn_search_result_layout.setVisibility(View.VISIBLE);
+                    }
+                    save_result.setEnabled(true);
+                }
+            }
+        });
     }
 
     @Override
@@ -111,7 +160,7 @@ public class CheckActivity extends BaseActivity {
         return true;
     }
 
-    @OnClick({R.id.save_result, R.id.check_qrcode, R.id.check_scan})
+    @OnClick({R.id.save_result, R.id.check_qrcode, R.id.check_scan, R.id.sn_search_result_add})
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.save_result:
@@ -133,6 +182,7 @@ public class CheckActivity extends BaseActivity {
                 checkModel.setBd_swith(""+command);
                 checkModel.setBd_rssi(""+rssiNum);
                 checkModel.setCpuid(cpuid);
+                checkModel.setIite_sn(sn_search_result.getText().toString());
                 Dao.getInstance(this).addData(checkModel);
                 showToast("保存成功");
                 closeBLE();
@@ -155,6 +205,10 @@ public class CheckActivity extends BaseActivity {
                     return;
                 }
                 startActivityForResult(new Intent(CheckActivity.this, BLEDeviceListActivity.class), ParamUtils.RESULT_SCANBLE);
+                break;
+            case R.id.sn_search_result_add:
+                Intent intent_sn=new Intent(CheckActivity.this, CaptureActivity.class);
+                startActivityForResult(intent_sn, ParamUtils.RESULT_QRCODESN);
                 break;
         }
     }
@@ -183,6 +237,8 @@ public class CheckActivity extends BaseActivity {
                 rssi=false;
             }
             rssiNum=Integer.parseInt(model.getValue());
+
+            rssi_sub.onNext("rssi");
         }
         else if (model.getCommand()==ParamUtils.BLE_COMMAND_BATTERY) {
             if (Math.abs(Integer.parseInt(model.getValue()))>Integer.parseInt(ACache.get(this).getAsString("battery"))) {
@@ -194,6 +250,8 @@ public class CheckActivity extends BaseActivity {
                 battery=false;
             }
             batteryNum=Integer.parseInt(model.getValue());
+
+            battery_sub.onNext("battery");
         }
         else if (model.getCommand()==ParamUtils.BLE_COMMAND_TEST) {
             try {
@@ -206,6 +264,8 @@ public class CheckActivity extends BaseActivity {
                     command_result.setImageResource(R.mipmap.ic_state2);
                     command=false;
                 }
+
+                command_sub.onNext("command");
             } catch (JSONException e) {
                 e.printStackTrace();
                 command_result.setImageResource(R.mipmap.ic_state2);
@@ -256,6 +316,9 @@ public class CheckActivity extends BaseActivity {
             rssi_result.setImageResource(R.mipmap.ic_state1);
             command_result.setImageResource(R.mipmap.ic_state1);
             battery_result.setImageResource(R.mipmap.ic_state1);
+            sn_search_result.setText("");
+            sn_search_result_layout.setVisibility(View.GONE);
+            save_result.setEnabled(false);
 
             rssi=false;
             rssiNum=0;
@@ -290,6 +353,9 @@ public class CheckActivity extends BaseActivity {
         else if (resultCode==RESULT_OK && requestCode==ParamUtils.RESULT_SCANBLE) {
             sendCommandWithName(ParamUtils.BLE_COMMAND_CONNECT, data.getExtras().getString("address"));
             check_state.setText("正在连接设备中");
+        }
+        else if (requestCode==ParamUtils.RESULT_QRCODESN && resultCode==RESULT_OK) {
+            sn_search_result.setText(data.getExtras().getString("result"));
         }
     }
 }

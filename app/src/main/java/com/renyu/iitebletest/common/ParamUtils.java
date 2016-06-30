@@ -117,6 +117,7 @@ public class ParamUtils {
     public final static int RESULT_ENABLE_BT=1013;
     public final static int RESULT_QRCODE=1000;
     public final static int RESULT_SCANBLE=1001;
+    public final static int RESULT_QRCODESN=1002;
 
     //当前已经执行数
     public static int currentUploadCount=0;
