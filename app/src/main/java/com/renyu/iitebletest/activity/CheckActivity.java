@@ -69,6 +69,8 @@ public class CheckActivity extends BaseActivity {
     String uniqueid;
     String deviceName="";
     String cpuid="";
+    String infoversion="";
+    String infoname="";
 
     Subscriber rssi_sub;
     Subscriber command_sub;
@@ -101,7 +103,7 @@ public class CheckActivity extends BaseActivity {
                         ParamUtils.totalUploadCount=lists.size();
                         ParamUtils.currentUploadCount=0;
                         for (BLECheckModel list : lists) {
-                            RetrofitUtils.getInstance().upload(list.getIite_sn(), list.getCpuid(), list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
+                            RetrofitUtils.getInstance().upload(list.getModel(), list.getVersion(), list.getIite_sn(), list.getCpuid(), list.getBd_sn(), list.getQc_id_a(), list.getQc_date_a(),
                                     list.getBd_old(), list.getBd_rssi(), Boolean.parseBoolean(list.getBd_swith()),
                                     Boolean.parseBoolean(list.getQc_result_a()), CheckActivity.this);
                         }
@@ -183,6 +185,8 @@ public class CheckActivity extends BaseActivity {
                 checkModel.setBd_rssi(""+rssiNum);
                 checkModel.setCpuid(cpuid);
                 checkModel.setIite_sn(sn_search_result.getText().toString());
+                checkModel.setModel(infoname);
+                checkModel.setVersion(infoversion);
                 Dao.getInstance(this).addData(checkModel);
                 showToast("保存成功");
                 closeBLE();
@@ -283,6 +287,12 @@ public class CheckActivity extends BaseActivity {
                 e.printStackTrace();
             }
         }
+        else if (model.getCommand()==ParamUtils.BLE_COMMAND_INFOVERSION) {
+            infoversion=model.getValue();
+        }
+        else if (model.getCommand()==ParamUtils.BLE_COMMAND_INFONAME) {
+            infoname=model.getValue();
+        }
     }
 
     public void onEventMainThread(BLEConnectModel model) {
@@ -297,11 +307,13 @@ public class CheckActivity extends BaseActivity {
                 public void call(Long aLong) {
                     sendCommand(ParamUtils.BLE_COMMAND_SETMOTOR);
                     sendCommand(ParamUtils.BLE_COMMAND_GETINFO);
+                    sendCommand(ParamUtils.BLE_COMMAND_GETUID);
+                    sendCommand(ParamUtils.BLE_COMMAND_CPUID);
+                    sendCommand(ParamUtils.BLE_COMMAND_INFOVERSION);
+                    sendCommand(ParamUtils.BLE_COMMAND_INFONAME);
                     sendCommand(ParamUtils.BLE_COMMAND_RSSI);
                     sendCommand(ParamUtils.BLE_COMMAND_BATTERY);
-                    sendCommand(ParamUtils.BLE_COMMAND_GETUID);
                     sendCommand(ParamUtils.BLE_COMMAND_TEST);
-                    sendCommand(ParamUtils.BLE_COMMAND_CPUID);
                 }
             });
         }

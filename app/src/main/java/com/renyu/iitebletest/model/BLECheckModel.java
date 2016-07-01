@@ -35,6 +35,10 @@ public class BLECheckModel {
     String cpuid;
     @DatabaseField (columnName = "iite_sn")
     String iite_sn;
+    @DatabaseField (columnName = "version")
+    String version;
+    @DatabaseField (columnName = "model")
+    String model="";
 
     public String getBd_sn() {
         return bd_sn;
@@ -106,5 +110,21 @@ public class BLECheckModel {
 
     public void setIite_sn(String iite_sn) {
         this.iite_sn = iite_sn;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 }

@@ -20,7 +20,7 @@ public class Dao extends OrmLiteSqliteOpenHelper {
     private static Dao dao;
 
     private final static String databaseName="iitetest.db";
-    private final static int databaseVersion=2;
+    private final static int databaseVersion=3;
 
     public synchronized static Dao getInstance(Context context) {
         if (dao==null) {
