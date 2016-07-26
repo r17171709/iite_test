@@ -1,5 +1,6 @@
 package com.renyu.iitebletest.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -27,19 +28,61 @@ public class MainActivity extends BaseActivity {
     @Bind(R.id.main_value)
     TextView main_value;
 
-    String[] commandsText={"设定时间", "读取时间", "读取牙刷状态", "设置userid", "读取userid", "恢复出厂设置",
-            "获取牙刷当前姿态", "获取最近一次刷牙记录", "获取所有刷牙记录", "获取指定一条刷牙记录", "获取当前姿态识别模式",
-            "设定姿态识别模式", "进入游戏模式", "游戏模式的暂停和恢复", "设定led1", "设定led2", "设定motor", "设备reset",
-            "获取uniqueid", "获取qrcode", "进入固件升级模式", "读取电池电压", "绑定牙刷"};
-    int[] commands={ParamUtils.BLE_COMMAND_TIME, ParamUtils.BLE_COMMAND_GETTIME, ParamUtils.BLE_COMMAND_GETSTATE,
-            ParamUtils.BLE_COMMAND_SETUSERID, ParamUtils.BLE_COMMAND_GETUSERID, ParamUtils.BLE_COMMAND_FACTORY,
-            ParamUtils.BLE_COMMAND_ATTITUDE, ParamUtils.BLE_COMMAND_GETCURRENTTEETHINFO,
-            ParamUtils.BLE_COMMAND_GETALLINFO, ParamUtils.BLE_COMMAND_GETONEINFO,
-            ParamUtils.BLE_COMMAND_ATTITUDEMODE, ParamUtils.BLE_COMMAND_SETATTITUDEMODE, ParamUtils.BLE_COMMAND_GAMESTART,
+    String[] commandsText={
+            "设定时间",
+            "读取时间",
+            "读取牙刷状态",
+            "设置userid",
+            "读取userid",
+            "设置惯用手",
+            "恢复出厂设置",
+            "获取牙刷当前姿态",
+            "获取最近一次刷牙记录",
+            "获取所有刷牙记录",
+            "获取指定一条刷牙记录",
+            "获取当前姿态识别模式",
+            "设定姿态识别模式",
+            "进入游戏模式",
+            "游戏模式的暂停和恢复",
+            "清除所有刷牙数据",
+            "校准模式的进入和退出",
+            "设定led1",
+            "设定led2",
+            "设定motor",
+            "设备reset",
+            "获取uniqueid",
+            "获取qrcode",
+            "进入固件升级模式",
+            "读取电池电压",
+            "绑定牙刷"};
+
+    int[] commands={
+            ParamUtils.BLE_COMMAND_TIME,
+            ParamUtils.BLE_COMMAND_GETTIME,
+            ParamUtils.BLE_COMMAND_GETSTATE,
+            ParamUtils.BLE_COMMAND_SETUSERID,
+            ParamUtils.BLE_COMMAND_GETUSERID,
+            ParamUtils.BLE_COMMAND_DOMINANT,
+            ParamUtils.BLE_COMMAND_FACTORY,
+            ParamUtils.BLE_COMMAND_ATTITUDE,
+            ParamUtils.BLE_COMMAND_GETCURRENTTEETHINFO,
+            ParamUtils.BLE_COMMAND_GETALLINFO,
+            ParamUtils.BLE_COMMAND_GETONEINFO,
+            ParamUtils.BLE_COMMAND_ATTITUDEMODE,
+            ParamUtils.BLE_COMMAND_SETATTITUDEMODE,
+            ParamUtils.BLE_COMMAND_GAMESTART,
             ParamUtils.BLE_COMMAND_GAMECONTROL,
-            ParamUtils.BLE_COMMAND_SETLED1, ParamUtils.BLE_COMMAND_SETLED2, ParamUtils.BLE_COMMAND_SETMOTOR,
-            ParamUtils.BLE_COMMAND_SETRESET, ParamUtils.BLE_COMMAND_GETUID, ParamUtils.BLE_COMMAND_GETQRCODE,
-            ParamUtils.BLE_COMMAND_UPDATE, ParamUtils.BLE_COMMAND_GETV, ParamUtils.BLE_COMMAND_BINDTEETH};
+            ParamUtils.BLE_COMMAND_CLEANTEETH,
+            ParamUtils.BLE_COMMAND_CALIBRATION,
+            ParamUtils.BLE_COMMAND_SETLED1,
+            ParamUtils.BLE_COMMAND_SETLED2,
+            ParamUtils.BLE_COMMAND_SETMOTOR,
+            ParamUtils.BLE_COMMAND_SETRESET,
+            ParamUtils.BLE_COMMAND_GETUID,
+            ParamUtils.BLE_COMMAND_GETQRCODE,
+            ParamUtils.BLE_COMMAND_UPDATE,
+            ParamUtils.BLE_COMMAND_GETV,
+            ParamUtils.BLE_COMMAND_BINDTEETH};
 
     ArrayList<String> commandList;
 
@@ -60,7 +103,25 @@ public class MainActivity extends BaseActivity {
 
         EventBus.getDefault().register(this);
 
-        openBlueTooth();
+        //openBlueTooth();
+        startActivityForResult(new Intent(MainActivity.this, BLEDeviceListActivity.class), ParamUtils.RESULT_SCANBLE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode==RESULT_OK && requestCode==ParamUtils.RESULT_QRCODE) {
+
+            Intent intent=new Intent(MainActivity.this, BLEDeviceListActivity.class);
+            Bundle bundle=new Bundle();
+            bundle.putString("name", data.getExtras().getString("result"));
+            intent.putExtras(bundle);
+            startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
+        }
+        else if (resultCode==RESULT_OK && requestCode==ParamUtils.RESULT_SCANBLE) {
+            sendCommandWithName(ParamUtils.BLE_COMMAND_CONNECT, data.getExtras().getString("address"));
+            main_state.setText("正在连接设备中");
+        }
     }
 
     private void initViews() {

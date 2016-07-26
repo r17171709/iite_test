@@ -71,6 +71,8 @@ public class ParamUtils {
     public static final int BLE_COMMAND_GETUSERID=165;
     //恢复出厂设置
     public static final int BLE_COMMAND_FACTORY=166;
+    //设置惯用手
+    public static final int BLE_COMMAND_DOMINANT=168;
     //获取牙刷当前姿态
     public static final int BLE_COMMAND_ATTITUDE=177;
     //获取最近一次刷牙记录
@@ -90,6 +92,8 @@ public class ParamUtils {
     public static final int BLE_COMMAND_GAMECONTROL=184;
     //清空所有刷牙信息
     public static final int BLE_COMMAND_CLEANTEETH=185;
+    //校准模式的进入和退出
+    public static final int BLE_COMMAND_CALIBRATION=187;
     //设定led1
     public static final int BLE_COMMAND_SETLED1=193;
     //设定led2
