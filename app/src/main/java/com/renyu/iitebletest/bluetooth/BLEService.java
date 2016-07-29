@@ -234,6 +234,10 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                                 otaFirmwareWrite.OTAExitBootloaderCmd(mCheckSumType);
                                 Utils.setStringSharedPreference(BLEService.this, Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands.EXIT_BOOTLOADER);
                                 Log.d("BLEService", "bootloader结束");
+
+                                BLECommandModel model=new BLECommandModel();
+                                model.setCommand(ParamUtils.OTA_COMMAND_END);
+                                EventBus.getDefault().post(model);
                             }
                         }
 
@@ -257,6 +261,10 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                     if (extras.containsKey(Constants.EXTRA_ERROR_OTA)) {
                         String errorMessage = extras.getString(Constants.EXTRA_ERROR_OTA);
                         Log.d("BLEService", errorMessage);
+
+                        BLECommandModel model=new BLECommandModel();
+                        model.setCommand(ParamUtils.OTA_COMMAND_ERROR);
+                        EventBus.getDefault().post(model);
                     }
                 }
                 if (action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
@@ -1028,6 +1036,11 @@ public class BLEService extends Service implements FileReadStatusUpdater {
     private void showProgress(int fileStatus, float fileLineNos, float totalLines) {
         if (fileStatus == 1) {
             Log.i("BLEService", (int) fileLineNos+"  "+(int) totalLines+"  "+(int) ((fileLineNos / totalLines) * 100) + "%");
+
+            BLECommandModel model=new BLECommandModel();
+            model.setCommand(ParamUtils.OTA_COMMAND_PROGRESS);
+            model.setValue(""+(int) ((fileLineNos / totalLines) * 100));
+            EventBus.getDefault().post(model);
         }
         if (fileStatus == 2) {
             Log.d("BLEService", "结束");

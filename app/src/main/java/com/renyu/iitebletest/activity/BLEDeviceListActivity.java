@@ -1,6 +1,5 @@
 package com.renyu.iitebletest.activity;
 
-import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
@@ -9,10 +8,10 @@ import android.support.v7.widget.Toolbar;
 
 import com.renyu.iitebletest.R;
 import com.renyu.iitebletest.adapter.BLEDeviceListAdapter;
+import com.renyu.iitebletest.common.ACache;
 import com.renyu.iitebletest.model.BLEConnectModel;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import butterknife.Bind;
 import de.greenrobot.event.EventBus;
@@ -63,6 +62,14 @@ public class BLEDeviceListActivity extends BaseActivity {
     }
 
     public void onEventMainThread(com.renyu.iitebletest.bluetooth.BluetoothDevice model) {
+        if (getIntent().getExtras().getInt("type")==2) {
+            if (ACache.get(this).getAsObject("finishOta")!=null) {
+                ArrayList<String> otas= (ArrayList<String>) ACache.get(this).getAsObject("finishOta");
+                if (otas.contains(model.getDevice().getAddress())) {
+                    return;
+                }
+            }
+        }
         if (models.size()==0) {
             models.add(model);
             adapter.notifyItemInserted(0);
