@@ -508,7 +508,7 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             }
             return;
         }
-        callback=new MyLeScanCallback(10, adapter) {
+        callback=new MyLeScanCallback(3, adapter) {
             @Override
             public void scanCancelCallBack() {
                 Log.d("BLEService", "取消扫描");
