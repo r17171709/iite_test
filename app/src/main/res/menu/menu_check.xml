@@ -15,4 +15,11 @@
         app:showAsAction="always">
 
     </item>
+    <item
+        android:id="@+id/menu_check_update"
+        android:title="升级"
+        android:icon="@drawable/ic_call_merge_black_24dp"
+        app:showAsAction="always">
+
+    </item>
 </menu>

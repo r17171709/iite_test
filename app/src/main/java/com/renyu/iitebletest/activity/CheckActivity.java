@@ -112,6 +112,10 @@ public class CheckActivity extends BaseActivity {
                         showToast("正在上传，请稍后再试");
                     }
                 }
+                if (item.getItemId()==R.id.menu_check_update) {
+                    startActivity(new Intent(CheckActivity.this, OtaActivity.class));
+                    finish();
+                }
                 return false;
             }
         });

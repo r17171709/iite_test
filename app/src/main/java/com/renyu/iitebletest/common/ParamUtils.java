@@ -110,9 +110,14 @@ public class ParamUtils {
     public static final int BLE_COMMAND_TEST=202;
     //连接指令
     public static final int BLE_COMMAND_CONNECT=203;
-    //OTA
+    //进行OTA操作
     public static final int OTAEnterBootLoaderCmd=300;
-    public static boolean mFileupgradeStarted=false;
+    //OTA进度
+    public static final int OTA_COMMAND_PROGRESS=301;
+    //OTA结束
+    public static final int OTA_COMMAND_END=302;
+    //OTA发生错误
+    public static final int OTA_COMMAND_ERROR=303;
 
     public final static int RESULT_ENABLE_BT=1013;
     public final static int RESULT_QRCODE=1000;
@@ -124,28 +129,10 @@ public class ParamUtils {
     //总上传数
     public static int totalUploadCount=0;
 
-
     /**
      * GATT Status constants
      */
-    public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED_CAROUSEL =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED_CAROUSEL";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE =
             "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
-    public final static String ACTION_GATT_DISCONNECTED_OTA =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED_OTA";
-    public final static String ACTION_GATT_CONNECT_OTA =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECT_OTA";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED_OTA =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED_OTA";
-    public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
-            "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
+    public static boolean mFileupgradeStarted=false;
 }
