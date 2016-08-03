@@ -516,7 +516,7 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             }
             return;
         }
-        callback=new MyLeScanCallback(10, adapter) {
+        callback=new MyLeScanCallback(5, adapter) {
             @Override
             public void scanCancelCallBack() {
                 Log.d("BLEService", "取消扫描");
@@ -911,24 +911,28 @@ public class BLEService extends Service implements FileReadStatusUpdater {
 
     //For Pairing
     private void pairDevice(BluetoothDevice device) {
-        try {
-            Method m = device.getClass().getMethod("createBond", (Class[]) null);
-            m.invoke(device, (Object[]) null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        return;
+
+//        try {
+//            Method m = device.getClass().getMethod("createBond", (Class[]) null);
+//            m.invoke(device, (Object[]) null);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
     }
 
     //For UnPairing
     private void unpairDevice(BluetoothDevice device) {
-        try {
-            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
-            m.invoke(device, (Object[]) null);
+        return;
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+//            m.invoke(device, (Object[]) null);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {

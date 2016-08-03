@@ -34,9 +34,13 @@ public class OtaActivity extends BaseActivity {
     @Bind(R.id.ota_begin)
     Button ota_begin;
 
-    String filePath;
+    String filePath1;
+    String filePath2;
+
+    int otaStep;
 
     String lastAddress="";
+    String cpuid="";
 
     @Override
     public int initContentView() {
@@ -47,7 +51,10 @@ public class OtaActivity extends BaseActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        filePath= Environment.getExternalStorageDirectory().getPath()+File.separator+"1.3.0V5.cyacd";
+        otaStep = 0;
+        filePath1= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160725V1.2.1FOR1.6.cyacd";
+        filePath2= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160725V1.2.1FOR1.7.cyacd";
+        ota_desp.setText("点击【开始】进行扫描");
 
         EventBus.getDefault().register(this);
     }
@@ -63,6 +70,7 @@ public class OtaActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode==ParamUtils.RESULT_SCANBLE && resultCode==RESULT_OK) {
+            ota_desp.setText("连接中...");
             lastAddress=data.getExtras().getString("address");
             sendCommandWithName(ParamUtils.BLE_COMMAND_CONNECT, lastAddress);
         }
@@ -74,14 +82,29 @@ public class OtaActivity extends BaseActivity {
     @OnClick({R.id.ota_begin})
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.ota_begin:
-                Intent intent=new Intent(OtaActivity.this, BLEDeviceListActivity.class);
-                Bundle bundle=new Bundle();
-                bundle.putInt("type", 2);
-                intent.putExtras(bundle);
-                startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
-                ota_begin.setVisibility(View.GONE);
-                break;
+            case R.id.ota_begin: {
+                if(otaStep == 0) {
+                    Intent intent = new Intent(OtaActivity.this, BLEDeviceListActivity.class);
+                    Bundle bundle = new Bundle();
+                    bundle.putInt("type", 2);
+                    intent.putExtras(bundle);
+                    startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
+                    ota_begin.setVisibility(View.GONE);
+                    break;
+                }
+                else if(otaStep == 1)
+                {
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            sendCommand(ParamUtils.BLE_COMMAND_UPDATE);
+                            ota_desp.setText("准备进入固件升级");
+                        }
+                    }, 1000);
+                    ota_begin.setVisibility(View.GONE);
+                    break;
+                }
+            }
         }
     }
 
@@ -104,23 +127,32 @@ public class OtaActivity extends BaseActivity {
             }
             lastAddress="";
             closeBLE();
+            otaStep = 0;
+            ota_begin.setVisibility(View.VISIBLE);
         }
         else if (ParamUtils.OTA_COMMAND_ERROR==model.getCommand()) {
             ota_desp.setText("升级失败");
             closeBLE();
+            otaStep = 0;
+            ota_begin.setVisibility(View.VISIBLE);
+        }
+        else if (model.getCommand()==ParamUtils.BLE_COMMAND_CPUID) {
+            cpuid=model.getValue();
+            ota_desp.setText("BLE连接成功");
+            ota_begin.setVisibility(View.VISIBLE);
+            otaStep = 1;
         }
     }
 
     public void onEventMainThread(BLEConnectModel model) {
         if (model.getBlestate()== BLEConnectModel.BLESTATE.STATE_CONNECTED) {
-            ota_desp.setText("BLE连接成功");
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    sendCommand(ParamUtils.BLE_COMMAND_UPDATE);
-                    ota_desp.setText("准备进入固件升级");
+                    sendCommand(ParamUtils.BLE_COMMAND_CPUID);
                 }
             }, 1000);
+
         }
         else if (model.getBlestate()== BLEConnectModel.BLESTATE.STATE_DISCONNECTED) {
             Utils.setStringSharedPreference(this, Constants.PREF_OTA_FILE_ONE_NAME, "Default");
@@ -135,22 +167,30 @@ public class OtaActivity extends BaseActivity {
                 sendCommandWithName(ParamUtils.BLE_COMMAND_CONNECT, lastAddress);
             }
             //如果在刷机结束后断开，则重写扫描
-            else {
-                Intent intent=new Intent(OtaActivity.this, BLEDeviceListActivity.class);
-                Bundle bundle=new Bundle();
-                bundle.putInt("type", 2);
-                intent.putExtras(bundle);
-                startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
-            }
+//            else {
+//                Intent intent=new Intent(OtaActivity.this, BLEDeviceListActivity.class);
+//                Bundle bundle=new Bundle();
+//                bundle.putInt("type", 2);
+//                intent.putExtras(bundle);
+//                startActivityForResult(intent, ParamUtils.RESULT_SCANBLE);
+//            }
         }
         else if (model.getBlestate()==BLEConnectModel.BLESTATE.STATE_OTA) {
             ota_desp.setText("BLE进入固件升级模式");
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    sendCommandWithName(ParamUtils.OTAEnterBootLoaderCmd, filePath);
-                }
-            }, 1000);
+            if(cpuid.equals("1.6"))
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommandWithName(ParamUtils.OTAEnterBootLoaderCmd, filePath1);
+                    }
+                }, 1000);
+            else if(cpuid.equals("1.7"))
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommandWithName(ParamUtils.OTAEnterBootLoaderCmd, filePath2);
+                    }
+                }, 1000);
         }
     }
 }
