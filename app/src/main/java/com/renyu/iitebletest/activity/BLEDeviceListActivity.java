@@ -62,7 +62,7 @@ public class BLEDeviceListActivity extends BaseActivity {
     }
 
     public void onEventMainThread(com.renyu.iitebletest.bluetooth.BluetoothDevice model) {
-        if (getIntent().getExtras().getInt("type")==2) {
+        if (getIntent().getExtras()!=null && getIntent().getExtras().getInt("type")==2) {
             if (ACache.get(this).getAsObject("finishOta")!=null) {
                 ArrayList<String> otas= (ArrayList<String>) ACache.get(this).getAsObject("finishOta");
                 if (otas.contains(model.getDevice().getAddress())) {
