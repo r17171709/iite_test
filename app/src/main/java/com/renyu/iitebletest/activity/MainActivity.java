@@ -175,6 +175,8 @@ public class MainActivity extends BaseActivity {
         super.onDestroy();
 
         EventBus.getDefault().unregister(this);
+
+        closeBLE();
     }
 
 }

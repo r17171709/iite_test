@@ -64,6 +64,8 @@ public class OtaActivity extends BaseActivity {
         super.onDestroy();
 
         EventBus.getDefault().unregister(this);
+
+        closeBLE();
     }
 
     @Override

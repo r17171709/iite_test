@@ -22,4 +22,11 @@
         app:showAsAction="always">
 
     </item>
+    <item
+        android:id="@+id/menu_check_debug"
+        android:title="调试"
+        android:icon="@drawable/ic_playlist_add_check_black_24dp"
+        app:showAsAction="always">
+
+    </item>
 </menu>

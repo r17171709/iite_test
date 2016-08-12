@@ -114,7 +114,9 @@ public class CheckActivity extends BaseActivity {
                 }
                 if (item.getItemId()==R.id.menu_check_update) {
                     startActivity(new Intent(CheckActivity.this, OtaActivity.class));
-                    finish();
+                }
+                if (item.getItemId()==R.id.menu_check_debug) {
+                    startActivity(new Intent(CheckActivity.this, MainActivity.class));
                 }
                 return false;
             }
