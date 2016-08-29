@@ -124,8 +124,6 @@ public class CheckActivity extends BaseActivity {
 
         QueueUtils.getInstance();
 
-        EventBus.getDefault().register(this);
-
         Observable o_rssi=Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
             public void call(Subscriber<? super Object> subscriber) {
@@ -160,6 +158,21 @@ public class CheckActivity extends BaseActivity {
                 }
             }
         });
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        EventBus.getDefault().unregister(this);
+
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        EventBus.getDefault().register(this);
     }
 
     @Override
