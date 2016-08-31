@@ -52,8 +52,8 @@ public class OtaActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
 
         otaStep = 0;
-        filePath1= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160725V1.2.1FOR1.6.cyacd";
-        filePath2= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160725V1.2.1FOR1.7.cyacd";
+        filePath1= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160828V1.3.1FOR1.6.cyacd";
+        filePath2= Environment.getExternalStorageDirectory().getPath()+File.separator+"20160828V1.3.1FOR1.7.cyacd";
         ota_desp.setText("点击【开始】进行扫描");
 
         EventBus.getDefault().register(this);
