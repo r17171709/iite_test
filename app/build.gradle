@@ -11,25 +11,19 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    signingConfigs {
+        myConfig{
+            storeFile file("android.keystore")
+            storePassword KEYSTORE_PASSWORD
+            keyAlias "android.keystore"
+            keyPassword KEY_PASSWORD
+        }
+    }
     buildTypes {
         release {
-            def appStoreFile = System.getenv("APP_STORE_FILE")
-            def appKeyAlias = System.getenv("APP_KEY_ALIAS")
-            def appKeyPassword = System.getenv("APP_KEY_PASSWORD")
-            def appStorePassword = System.getenv("APP_STORE_PASSWORD")
-            storeFile file(appStoreFile)
-            keyAlias appKeyAlias
-            keyPassword appKeyPassword
-            storePassword appStorePassword
-
+            signingConfig signingConfigs.myConfig
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-        debug {
-            storeFile file("debug.keystore")
-            keyAlias "AndroidDebugKey"
-            keyPassword "android"
-            storePassword "android"
         }
     }
     lintOptions {
