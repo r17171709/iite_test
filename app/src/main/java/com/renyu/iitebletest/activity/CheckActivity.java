@@ -114,15 +114,15 @@ public class CheckActivity extends BaseActivity {
                 }
                 if (item.getItemId()==R.id.menu_check_update) {
                     startActivity(new Intent(CheckActivity.this, OtaActivity.class));
-                    finish();
+                }
+                if (item.getItemId()==R.id.menu_check_debug) {
+                    startActivity(new Intent(CheckActivity.this, MainActivity.class));
                 }
                 return false;
             }
         });
 
         QueueUtils.getInstance();
-
-        EventBus.getDefault().register(this);
 
         Observable o_rssi=Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
@@ -158,6 +158,21 @@ public class CheckActivity extends BaseActivity {
                 }
             }
         });
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        EventBus.getDefault().unregister(this);
+
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        EventBus.getDefault().register(this);
     }
 
     @Override

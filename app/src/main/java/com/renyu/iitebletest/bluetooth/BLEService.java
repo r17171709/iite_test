@@ -84,6 +84,7 @@ public class BLEService extends Service implements FileReadStatusUpdater {
     private OTAFirmwareWrite otaFirmwareWrite;
     private static boolean m_otaExitBootloaderCmdInProgress = false;
     private int mProgressBarPosition = 0;
+    private int mCalibrationFlag = 0;
 
     BroadcastReceiver receiver=new BroadcastReceiver() {
         @Override
@@ -376,6 +377,11 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             else if (command==ParamUtils.BLE_COMMAND_FACTORY) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_FACTORY, null, this);
             }
+            else if (command==ParamUtils.BLE_COMMAND_DOMINANT) {
+                HashMap<String, String> params=new HashMap<>();
+                params.put("hand", "1");
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_DOMINANT, params, this);
+            }
             else if (command==ParamUtils.BLE_COMMAND_ATTITUDE) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_ATTITUDE, null, this);
             }
@@ -405,6 +411,21 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             }
             else if (command==ParamUtils.BLE_COMMAND_CLEANTEETH) {
                 QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_CLEANTEETH, null, this);
+            }
+            else if (command==ParamUtils.BLE_COMMAND_CALIBRATION) {
+                HashMap<String, String> params=new HashMap<>();
+                if(mCalibrationFlag == 0)
+                {
+                    params.put("control", "1");
+                    mCalibrationFlag = 1;
+                }
+                else
+                {
+                    params.put("control", "0");
+                    mCalibrationFlag = 0;
+                }
+
+                QueueUtils.getInstance().addTask(ParamUtils.BLE_COMMAND_CALIBRATION, params, this);
             }
             else if (command==ParamUtils.BLE_COMMAND_SETLED1) {
                 HashMap<String, String> params=new HashMap<>();
@@ -495,7 +516,7 @@ public class BLEService extends Service implements FileReadStatusUpdater {
             }
             return;
         }
-        callback=new MyLeScanCallback(10, adapter) {
+        callback=new MyLeScanCallback(5, adapter) {
             @Override
             public void scanCancelCallBack() {
                 Log.d("BLEService", "取消扫描");
@@ -897,24 +918,28 @@ public class BLEService extends Service implements FileReadStatusUpdater {
 
     //For Pairing
     private void pairDevice(BluetoothDevice device) {
-        try {
-            Method m = device.getClass().getMethod("createBond", (Class[]) null);
-            m.invoke(device, (Object[]) null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        return;
+
+//        try {
+//            Method m = device.getClass().getMethod("createBond", (Class[]) null);
+//            m.invoke(device, (Object[]) null);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
     }
 
     //For UnPairing
     private void unpairDevice(BluetoothDevice device) {
-        try {
-            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
-            m.invoke(device, (Object[]) null);
+        return;
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+//            m.invoke(device, (Object[]) null);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {

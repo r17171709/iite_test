@@ -18,7 +18,8 @@ public class AppApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        copyAssetsFile("1.3.0V5.cyacd", new File(Environment.getExternalStorageDirectory().getPath()+File.separator+"1.3.0V5.cyacd").getPath(), this);
+        copyAssetsFile("20160828V1.3.1FOR1.6.cyacd", new File(Environment.getExternalStorageDirectory().getPath()+File.separator+"20160828V1.3.1FOR1.6.cyacd").getPath(), this);
+        copyAssetsFile("20160828V1.3.1FOR1.7.cyacd", new File(Environment.getExternalStorageDirectory().getPath()+File.separator+"20160828V1.3.1FOR1.7.cyacd").getPath(), this);
     }
 
     /**
