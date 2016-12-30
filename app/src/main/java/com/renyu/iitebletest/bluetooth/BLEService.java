@@ -637,7 +637,11 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                     case BluetoothProfile.STATE_CONNECTED:
                         Log.d("BLEService", "BLE设备连接成功");
                         Log.d("BLEService", "BLE设备正在配置服务中");
+
+                        QueueUtils.getInstance().removeAllCommands();
+
                         gatt.discoverServices();
+
                         break;
                     case BluetoothProfile.STATE_DISCONNECTED:
                         Log.d("BLEService", "BLE设备连接断开");
@@ -645,8 +649,11 @@ public class BLEService extends Service implements FileReadStatusUpdater {
                         bleSubscription.unsubscribe();
 
                         gatt.close();
+                        gatt=null;
 
                         disConnect();
+
+                        QueueUtils.getInstance().removeAllCommands();
 
                         break;
                 }

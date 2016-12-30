@@ -193,6 +193,13 @@ public class QueueUtils {
         rotateThreadHandler.sendMessage(m);
     }
 
+    /**
+     * 清楚所有数据
+     */
+    public void removeAllCommands() {
+        receiverCommandMaps.clear();
+    }
+
     public void release() {
         if (currentSendSubscription!=null) {
             currentSendSubscription.unsubscribe();
@@ -228,6 +235,7 @@ public class QueueUtils {
                         EventBus.getDefault().post(model);
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        Log.d("QueueUtils", "指令错误");
                     } finally {
                         //清除指令
                         receiverCommandMaps.remove(""+command);
