@@ -1,20 +1,29 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
+    compileSdkVersion 23
     buildToolsVersion "25.0.2"
 
     defaultConfig {
         applicationId "com.renyu.iitebletest"
         minSdkVersion 19
-        targetSdkVersion 25
+        targetSdkVersion 23
         versionCode 1
         versionName "1.0"
+
+        ndk{
+            moduleName "jniLib"     // 模块名，编译出来的 .so 文件
+            abiFilters 'armeabi', 'armeabi-v7a', 'x86', 'x86_64'
+            ldLibs "log"
+        }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            jniDebuggable true
         }
     }
     lintOptions {
@@ -25,9 +34,9 @@ android {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.1.0'
-    compile 'com.android.support:recyclerview-v7:25.1.0'
-    compile 'com.android.support:design:25.1.0'
+    compile 'com.android.support:appcompat-v7:23+'
+    compile 'com.android.support:recyclerview-v7:23+'
+    compile 'com.android.support:design:23+'
     compile 'io.reactivex:rxandroid:1.2.1'
     compile 'com.jakewharton:butterknife:7.0.1'
     compile 'de.greenrobot:eventbus:2.4.1'

@@ -1,5 +1,7 @@
 package com.renyu.iitebletest.bluetooth;
 
+import com.renyu.iitebletest.jniLibs.JNIUtils;
+
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -88,5 +90,34 @@ public class BLEDataUtils {
     public String getOrigin_str()
     {
         return origin_str;
+    }
+
+    /**
+     * CCM加密
+     * byte test[] = {0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02};
+     * @param source
+     * @return
+     */
+    public static byte[] encode(byte[] source) {
+        JNIUtils jniUtils=new JNIUtils();
+        return jniUtils.sendencode(source);
+    }
+
+    /**
+     * CCM解密
+     * @param passCode
+     * @return
+     */
+    public static byte[] decode(byte[] passCode) {
+        JNIUtils jniUtils=new JNIUtils();
+        byte[] msg=new byte[16];
+        for (int i=0;i<16;i++) {
+            msg[i]=passCode[i];
+        }
+        byte[] tag=new byte[4];
+        for (int i=0;i<4;i++) {
+            tag[i]=passCode[16+i];
+        }
+        return jniUtils.senddecode(msg, tag);
     }
 }

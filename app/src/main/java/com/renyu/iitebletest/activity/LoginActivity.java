@@ -25,7 +25,7 @@ public class LoginActivity extends BaseActivity {
 
     @OnClick(R.id.login)
     public void onClick(View view) {
-        if (login_text.getText().equals("")) {
+        if (login_text.getText().toString().equals("")) {
             showToast("请输入工号");
             return;
         }

@@ -30,16 +30,15 @@
         <activity android:name=".activity.LoginActivity"
             android:theme="@style/AppNoActionBarTheme"
             android:screenOrientation="portrait" android:windowSoftInputMode="adjustPan">
-        </activity>
-        <activity android:name=".activity.MainActivity" android:screenOrientation="portrait">
-        </activity>
-        <activity android:name=".activity.CheckActivity" android:screenOrientation="portrait" android:theme="@style/AppNoActionBarTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".activity.MainActivity" android:screenOrientation="portrait">
+        </activity>
+        <activity android:name=".activity.CheckActivity" android:screenOrientation="portrait" android:theme="@style/AppNoActionBarTheme"></activity>
         <activity android:name=".activity.SettingActivity" android:screenOrientation="portrait" android:theme="@style/AppNoActionBarTheme"></activity>
         <activity android:name=".activity.BLEDeviceListActivity" android:screenOrientation="portrait" android:theme="@style/AppNoActionBarTheme"></activity>
         <activity android:name=".activity.OtaActivity" android:screenOrientation="portrait" android:theme="@style/AppNoActionBarTheme"></activity>
