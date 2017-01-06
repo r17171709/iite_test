@@ -4,36 +4,14 @@
 #include "stdint.h"
 #include "stdio.h"
 
-int aes128ccm_decrypt(uint8_t* msg, uint8_t* tag, uint8_t* cipher);
+void aes128ccm_decrypt(uint8_t* msg, uint8_t* tag, uint8_t* cipher);
 void aes128ccm_test(uint8_t* msg, uint8_t* cipher, uint8_t* tag);
 
 JNIEXPORT jstring JNICALL
 Java_com_renyu_iitebletest_jniLibs_JNIUtils_stringFromJni(JNIEnv *env, jobject instance) {
 
     // TODO
-
-    uint8_t msg[16] = { 0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55 };
-    uint8_t cipher[16];
-    uint8_t tag[16];
-    aes128ccm_test(msg, cipher, tag);
-    char result__[129];
-    memcmp(result__, (char*) cipher, 16);
-
-    char temp[256];
-    char output[256];
-
-    *temp = *output = 0;
-
-    for (int i=0; i<16; i++)
-    {
-        sprintf(temp, "%02x ", cipher[i]);
-        strcat(output, temp);
-    }
-
-    *result__ = 0;
-    strcpy(result__, output);
-
-    return (*env)->NewStringUTF(env, result__);
+    return (*env)->NewStringUTF(env, "Hello From JNI");
 }
 
 JNIEXPORT jbyteArray JNICALL
