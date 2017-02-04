@@ -12,7 +12,7 @@ public class JNIUtils {
 
     public native String stringFromJni();
 
-    public native byte[] sendencode(byte[] values);
+    public native byte[] sendencode(byte[] values, int payloadLength);
 
-    public native byte[] senddecode(byte[] values, byte[] tags);
+    public native byte[] senddecode(byte[] values, byte[] tags, int payloadLength);
 }

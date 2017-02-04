@@ -4,8 +4,8 @@
 #include "stdint.h"
 #include "stdio.h"
 
-void aes128ccm_decrypt(uint8_t* msg, uint8_t* tag, uint8_t* cipher);
-void aes128ccm_test(uint8_t* msg, uint8_t* cipher, uint8_t* tag);
+void aes128ccm_decrypt(uint8_t* msg, uint8_t* tag, uint8_t* cipher, size_t payloadLength);
+void aes128ccm_test(uint8_t* msg, uint8_t* cipher, uint8_t* tag, size_t payloadLength);
 
 JNIEXPORT jstring JNICALL
 Java_com_renyu_iitebletest_jniLibs_JNIUtils_stringFromJni(JNIEnv *env, jobject instance) {
@@ -16,7 +16,7 @@ Java_com_renyu_iitebletest_jniLibs_JNIUtils_stringFromJni(JNIEnv *env, jobject i
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_renyu_iitebletest_jniLibs_JNIUtils_sendencode(JNIEnv *env, jobject instance,
-                                                       jbyteArray values_) {
+                                                       jbyteArray values_, jint payloadLength) {
 
     jbyte *values = (*env)->GetByteArrayElements(env, values_, NULL);
     // TODO
@@ -26,7 +26,7 @@ Java_com_renyu_iitebletest_jniLibs_JNIUtils_sendencode(JNIEnv *env, jobject inst
     uint8_t cipher[16];
     uint8_t tag[16];
 
-    aes128ccm_test(output_, cipher, tag);
+    aes128ccm_test(output_, cipher, tag, payloadLength);
 
     char result__[129];
     memcpy(result__, (char*) cipher, 16);
@@ -46,7 +46,8 @@ Java_com_renyu_iitebletest_jniLibs_JNIUtils_sendencode(JNIEnv *env, jobject inst
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_renyu_iitebletest_jniLibs_JNIUtils_senddecode(JNIEnv *env, jobject instance,
-                                                       jbyteArray values_, jbyteArray tags_) {
+                                                       jbyteArray values_, jbyteArray tags_,
+                                                       jint payloadLength) {
     jbyte *values = (*env)->GetByteArrayElements(env, values_, NULL);
     jbyte *tags = (*env)->GetByteArrayElements(env, tags_, NULL);
 
@@ -57,7 +58,7 @@ Java_com_renyu_iitebletest_jniLibs_JNIUtils_senddecode(JNIEnv *env, jobject inst
 
     uint8_t cipher[16];
 
-    aes128ccm_decrypt(msg, tag, cipher);
+    aes128ccm_decrypt(msg, tag, cipher, payloadLength);
 
     char result__[129];
     memcpy(result__, (char*) cipher, 16);

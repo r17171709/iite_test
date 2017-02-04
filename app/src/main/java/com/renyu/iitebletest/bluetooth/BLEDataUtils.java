@@ -98,9 +98,9 @@ public class BLEDataUtils {
      * @param source
      * @return
      */
-    public static byte[] encode(byte[] source) {
+    public static byte[] encode(byte[] source, int payloadLength) {
         JNIUtils jniUtils=new JNIUtils();
-        return jniUtils.sendencode(source);
+        return jniUtils.sendencode(source, payloadLength);
     }
 
     /**
@@ -108,7 +108,7 @@ public class BLEDataUtils {
      * @param passCode
      * @return
      */
-    public static byte[] decode(byte[] passCode) {
+    public static byte[] decode(byte[] passCode, int payloadLength) {
         JNIUtils jniUtils=new JNIUtils();
         byte[] msg=new byte[16];
         for (int i=0;i<16;i++) {
@@ -118,6 +118,6 @@ public class BLEDataUtils {
         for (int i=0;i<4;i++) {
             tag[i]=passCode[16+i];
         }
-        return jniUtils.senddecode(msg, tag);
+        return jniUtils.senddecode(msg, tag, payloadLength);
     }
 }
